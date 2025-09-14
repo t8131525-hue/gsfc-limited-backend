@@ -5,10 +5,38 @@ from django.core.exceptions import ValidationError
 from django.utils.translation import gettext_lazy as _
 from audit_trail.mixins import AuditableMixin
 from django.utils.timezone import now
+from django.db.models import Q, UniqueConstraint
+from django.contrib.auth import get_user_model
+from django.contrib.auth.models import Group
 
 from django.contrib.auth import get_user_model  # Import User model
 
 User = get_user_model()  # Get the currently active user model
+
+
+# --- NEW MODEL: Lab ---
+class Lab(AuditableMixin, models.Model):
+    """Represents a physical or logical lab where tests are performed."""
+
+    name = models.CharField(max_length=255, unique=True)
+    description = models.TextField(blank=True, null=True)
+
+    # Access Control: Link Labs to Groups and specific Users for permissions
+    accessible_by_groups = models.ManyToManyField(
+        Group,
+        blank=True,
+        related_name="accessible_labs",
+        help_text="Groups that have access to perform and view tests in this lab.",
+    )
+    accessible_by_users = models.ManyToManyField(
+        User,
+        blank=True,
+        related_name="accessible_labs",
+        help_text="Specific users who have exceptional access to this lab.",
+    )
+
+    def __str__(self):
+        return self.name
 
 
 class Product(AuditableMixin, models.Model):
@@ -87,6 +115,8 @@ class ProductGrade(AuditableMixin, models.Model):
 
 
 class ParameterDefinition(AuditableMixin, models.Model):
+    name = models.CharField(max_length=255)
+    description = models.TextField(blank=True, null=True)
     DATA_TYPE_CHOICES = [
         ("INTEGER", "Integer"),
         ("DECIMAL", "Decimal"),
@@ -95,7 +125,6 @@ class ParameterDefinition(AuditableMixin, models.Model):
         ("ENUM", "Enum (Dropdown)"),
     ]
 
-    name = models.CharField(max_length=255)
     data_type = models.CharField(max_length=10, choices=DATA_TYPE_CHOICES)
     unit = models.CharField(max_length=50, blank=True, null=True)
     is_required = models.BooleanField(default=True)
@@ -148,15 +177,13 @@ class ParameterDefinition(AuditableMixin, models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        verbose_name = "Parameter Definition"
-        verbose_name_plural = "Parameter Definitions"
-        permissions = [
-            ("can_view_parameter_definitions", "Can view parameter definitions"),
-            (
-                "can_manage_parameter_definitions",
-                "Can add, edit, delete parameter definitions",
-            ),
-        ]
+        # A parameter is now unique by its name and unit, making it a reusable component.
+        unique_together = ("name", "unit")
+        verbose_name = "Parameter Definition (Library)"
+        verbose_name_plural = "Parameter Definitions (Library)"
+
+    def __str__(self):
+        return f"{self.name}" + (f" ({self.unit})" if self.unit else "")
 
     def clean(self):
         # Enforce that either product or product_grade is set, but not both.
@@ -244,22 +271,103 @@ class ParameterDefinition(AuditableMixin, models.Model):
         self.full_clean()  # Calls clean() before saving
         super().save(*args, **kwargs)
 
+
+# --- NEW MODEL: Specification ---
+# This is the core of the versioning system. It represents a versioned "recipe" or "blueprint".
+class Specification(AuditableMixin, models.Model):
+    name = models.CharField(
+        max_length=255,
+        help_text="A descriptive name for this version, e.g., 'v1.0 - Initial Release'",
+    )
+    version = models.PositiveIntegerField()
+    is_active = models.BooleanField(
+        default=True,
+        help_text="Is this the current, active specification for new tests?",
+    )
+
+    # A Specification is for EITHER a Product OR a ProductGrade
+    product = models.ForeignKey(
+        Product,
+        on_delete=models.CASCADE,
+        related_name="specifications",
+        null=True,
+        blank=True,
+    )
+    product_grade = models.ForeignKey(
+        ProductGrade,
+        on_delete=models.CASCADE,
+        related_name="specifications",
+        null=True,
+        blank=True,
+    )
+
+    # The set of parameters that define this specific version.
+    parameters = models.ManyToManyField(
+        ParameterDefinition, related_name="specifications"
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    activated_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="Timestamp of when this version was made active.",
+    )
+
+    class Meta:
+        # Ensure version numbers are unique per product/grade
+        unique_together = [("product", "version"), ("product_grade", "version")]
+        verbose_name = "Specification Version"
+        verbose_name_plural = "Specification Versions"
+
+    def clean(self):
+        # Enforce that either product or product_grade is set, but not both.
+        if self.product and self.product_grade:
+            raise ValidationError(
+                _("A specification can't be for both a Product and a Product Grade.")
+            )
+        if not self.product and not self.product_grade:
+            raise ValidationError(
+                _("A specification must be for either a Product or a Product Grade.")
+            )
+
+    def save(self, *args, **kwargs):
+        if self.is_active and not self.activated_at:
+            self.activated_at = now()
+
+        # Enforce only one active version per product/grade
+        if self.is_active:
+            queryset = Specification.objects.filter(is_active=True)
+            if self.product:
+                queryset = queryset.filter(product=self.product)
+            else:  # self.product_grade
+                queryset = queryset.filter(product_grade=self.product_grade)
+
+            queryset.exclude(pk=self.pk).update(is_active=False)
+
+        super().save(*args, **kwargs)
+
     def __str__(self):
-        if self.product:
-            return f"{self.name} (Product: {self.product.name})"
-        elif self.product_grade:
-            return f"{self.name} (Grade: {self.product_grade.product.name} - {self.product_grade.name})"
-        return self.name  # Should not happen with clean() method
+        target = self.product or self.product_grade
+        return f"{target} - Spec v{self.version} ({self.name})"
 
 
 class TestRecord(AuditableMixin, models.Model):
+    specification = models.ForeignKey(Specification, on_delete=models.PROTECT, related_name="test_records")
+    lab = models.ForeignKey(Lab, on_delete=models.PROTECT, related_name="test_records")
+    
+    record_id = models.CharField(max_length=20, unique=True, editable=False, null=True, blank=True)
+    batch_no = models.CharField(max_length=255)
+    sample_id = models.CharField(max_length=255)
+
     STATUS_CHOICES = [
         ("PENDING", "Pending"),
         ("APPROVED", "Approved"),
         ("REJECTED", "Rejected"),
         ("RETEST", "Retest"),
         ("RETEST_ORDERED", "Retest Ordered"),
-    ]
+    ]    
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="PENDING")
+
     record_id = models.CharField(
         max_length=20,
         unique=True,
