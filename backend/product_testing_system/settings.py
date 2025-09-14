@@ -2,12 +2,19 @@ import os
 import environ
 from pathlib import Path
 from datetime import timedelta
+
+# Define base directory
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = 'django-insecure-2mqdt9ja%mpaoc8wl-(pj13f@3c4zx)$auohzc5_)+157yel3r'
-BASE_DIR = Path(__file__).resolve().parent.parent
+# Initialize environment
 env = environ.Env(DEBUG=(bool, False))
+
+# Read .env file
 environ.Env.read_env(BASE_DIR / ".env")
+
+# Now safely access environment variables
+SECRET_KEY = env("SECRET_KEY")
+
 DEBUG = True
 
 ALLOWED_HOSTS = []
@@ -41,7 +48,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'audit_trail.request.AuditMiddleware', # Add this line
+    'audit_trail.request.AuditMiddleware',
 ]
 
 ROOT_URLCONF = 'product_testing_system.urls'
@@ -108,19 +115,19 @@ AUTHENTICATION_BACKENDS = [
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
-        'rest_framework.authentication.SessionAuthentication', # Optional, useful for browser API access
+        'rest_framework.authentication.SessionAuthentication', 
     ),
     'DEFAULT_PERMISSION_CLASSES': (
-        'rest_framework.permissions.IsAuthenticated', # Default to require authentication
+        'rest_framework.permissions.IsAuthenticated', 
     ),
 }
 
 SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=20), # Access token valid for 60 minutes
-    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),   # Refresh token valid for 7 days
-    'ROTATE_REFRESH_TOKENS': True,                 # Generate a new refresh token on refresh
-    'BLACKLIST_AFTER_ROTATION': True,              # Blacklist old refresh token
-    'UPDATE_LAST_LOGIN': False,                    # Do not update last_login on token refresh
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=20), 
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),   
+    'ROTATE_REFRESH_TOKENS': True,
+    'BLACKLIST_AFTER_ROTATION': True,
+    'UPDATE_LAST_LOGIN': False,
     'ALGORITHM': 'HS256',
     'SIGNING_KEY': 'your_secret_key_for_jwt', 
     'VERIFYING_KEY': None,
