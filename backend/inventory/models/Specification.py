@@ -1,6 +1,5 @@
 from audit_trail.mixins import AuditableMixin
 from django.db import models
-from inventory.models import Product, ProductGrade, ParameterDefinition
 from django.core.exceptions import ValidationError
 from django.utils.translation import gettext_lazy as _
 from django.utils.timezone import now
@@ -35,7 +34,7 @@ class Specification(AuditableMixin, models.Model):
 
     # The set of parameters that define this specific version.
     parameters = models.ManyToManyField(
-        'inventory.ProductDefinition', related_name="specifications"
+        'inventory.ParameterDefinition', related_name="specifications"
     )
 
     created_at = models.DateTimeField(auto_now_add=True)

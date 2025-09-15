@@ -1,5 +1,6 @@
 from rest_framework import serializers
-from ..serializers import TestResultDisplaySerializer, TestResultInputSerializer
+from .TestResultDisplaySerializer import TestResultDisplaySerializer
+from .TestResultInputSerializer import TestResultInputSerializer
 from ..models import TestRecord, TestResult
 from django.db import transaction
 from audit_trail.utils import log_custom_event

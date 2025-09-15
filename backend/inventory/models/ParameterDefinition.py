@@ -39,14 +39,14 @@ class ParameterDefinition(AuditableMixin, models.Model):
         help_text="The maximum normal value for this parameter.",
     )
     product = models.ForeignKey(
-        Product,
+        "inventory.Product",
         on_delete=models.CASCADE,
         related_name="parameters",
         null=True,
         blank=True,
     )
     product_grade = models.ForeignKey(
-        'inventory.ProductGrade',
+        "inventory.ProductGrade",
         on_delete=models.CASCADE,
         related_name="parameters",
         null=True,
@@ -155,5 +155,5 @@ class ParameterDefinition(AuditableMixin, models.Model):
                 )
 
     def save(self, *args, **kwargs):
-        self.full_clean()  
+        self.full_clean()
         super().save(*args, **kwargs)

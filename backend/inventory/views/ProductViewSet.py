@@ -5,7 +5,13 @@ from ..serializers import ProductSerializer
 from django_filters.rest_framework import DjangoFilterBackend
 from product_testing_system.pagination import StandardResultsSetPagination
 from rest_framework.filters import SearchFilter, OrderingFilter
+from django.utils import timezone
+from django.db import transaction
+from django.contrib.auth import get_user_model
+from audit_trail.utils import log_custom_event
+from ..serializers.AssignAnalystSerializer import AssignAnalystSerializer
 
+User = get_user_model()
 
 class ProductViewSet(viewsets.ModelViewSet):
     queryset = Product.objects.all().order_by("name")

@@ -1,7 +1,7 @@
 from audit_trail.mixins import AuditableMixin
 from django.db import models
 from django.core.exceptions import ValidationError
-from inventory.models import Product, ParameterDefinition
+from inventory.models import ParameterDefinition
 
 
 class ProductGrade(AuditableMixin, models.Model):

@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from ..serializers import TestResultDisplaySerializer
+from .TestResultDisplaySerializer import TestResultDisplaySerializer
 from ..models import TestRecord
 
 

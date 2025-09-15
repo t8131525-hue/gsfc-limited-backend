@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from ..models import TestResult
-from ..serializers import ParameterDisplaySerializer
+from ..serializers.ParameterDisplaySerializer import ParameterDisplaySerializer
 from decimal import Decimal
 
 

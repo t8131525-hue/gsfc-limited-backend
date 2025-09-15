@@ -8,7 +8,14 @@ from ..filters import TestRecordFilter
 from rest_framework.response import Response
 from rest_framework.decorators import action
 from rest_framework import viewsets, permissions, status
+# Add all of these at the top of the file
+from django.utils import timezone
+from django.db import transaction
+from django.contrib.auth import get_user_model
+from audit_trail.utils import log_custom_event
+from ..serializers.AssignAnalystSerializer import AssignAnalystSerializer
 
+User = get_user_model()
 
 class TestRecordViewSet(viewsets.ModelViewSet):
     """
