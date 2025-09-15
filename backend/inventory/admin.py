@@ -1,6 +1,11 @@
 # inventory/admin.py
 from django.contrib import admin
-from .models import Product, ProductGrade, ParameterDefinition, TestRecord, TestResult
+from inventory.models.Product import Product
+from inventory.models.ProductGrade import ProductGrade
+from inventory.models.ParameterDefinition import ParameterDefinition
+from inventory.models.TestRecord import TestRecord
+from inventory.models.TestResult import TestResult  # <- fixes the error
+
 
 # --- ADD THIS INLINE CONFIGURATION AT THE TOP ---
 class TestResultInline(admin.TabularInline):
