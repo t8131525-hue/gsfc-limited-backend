@@ -5,7 +5,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.views import TokenObtainPairView
-from .serializers import UserDetailSerializer
+from .serializers import UserDetailSerializer, CustomTokenObtainPairSerializer
 from audit_trail.utils import log_custom_event
 from rest_framework_simplejwt.exceptions import TokenError
 import logging
@@ -39,6 +39,8 @@ class HasRequiredPermission(permissions.BasePermission):
 
 class CustomTokenObtainPairView(TokenObtainPairView):
     """Custom login view to add audit logging."""
+
+    serializer_class = CustomTokenObtainPairSerializer
 
     def post(self, request, *args, **kwargs):
         response = super().post(request, *args, **kwargs)
@@ -111,7 +113,7 @@ class UserListView(generics.ListAPIView):
     # Use the new permission class
     permission_classes = [permissions.IsAuthenticated, HasRequiredPermission]
     # Specify the single required permission codename (app_label.codename)
-    required_permission = "authentication.view_analyst_list"
+    required_permission = "authentication.view_user_list"
 
     def get_queryset(self):
         """

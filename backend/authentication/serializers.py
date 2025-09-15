@@ -2,6 +2,7 @@
 from rest_framework import serializers
 from django.contrib.auth.models import Group, Permission
 from django.contrib.auth import get_user_model
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 
 User = get_user_model()
 
@@ -50,3 +51,23 @@ class UserDetailSerializer(serializers.ModelSerializer):
             "groups",
             "user_permissions",
         )
+
+class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
+    """
+    Custom token serializer to add user data to the login response.
+    """
+    @classmethod
+    def get_token(cls, user):
+        token = super().get_token(user)
+        # You could add custom claims to the token here if needed
+        return token
+
+    def validate(self, attrs):
+        # The default validate method returns the access and refresh tokens.
+        data = super().validate(attrs)
+        
+        # Serialize the user data and add it to the response.
+        serializer = UserDetailSerializer(self.user)
+        data['user'] = serializer.data
+        
+        return data

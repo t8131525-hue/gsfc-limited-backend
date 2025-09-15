@@ -12,7 +12,7 @@ class User(AbstractUser):
 
     class Meta(AbstractUser.Meta):
         permissions = [
-            ("view_analyst_list", "Can view list of analysts"),
+           ("view_user_list", "Can view list of users"),
         ]
 
     pass
