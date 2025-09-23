@@ -113,23 +113,28 @@ AUTHENTICATION_BACKENDS = [
    ]
 
 REST_FRAMEWORK = {
+    # Authentication Settings
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
         'rest_framework.authentication.SessionAuthentication', 
     ),
+    # Permission Settings
     'DEFAULT_PERMISSION_CLASSES': (
         'rest_framework.permissions.IsAuthenticated', 
     ),
+    # Pagination Settings
+    "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
+    "PAGE_SIZE": 15,
 }
 
 SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=20), 
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=2), 
     'REFRESH_TOKEN_LIFETIME': timedelta(days=7),   
     'ROTATE_REFRESH_TOKENS': True,
     'BLACKLIST_AFTER_ROTATION': True,
     'UPDATE_LAST_LOGIN': False,
     'ALGORITHM': 'HS256',
-    'SIGNING_KEY': 'your_secret_key_for_jwt', 
+    'SIGNING_KEY': SECRET_KEY,
     'VERIFYING_KEY': None,
     'AUDIENCE': None,
     'ISSUER': None,
