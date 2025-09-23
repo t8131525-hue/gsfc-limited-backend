@@ -16,18 +16,17 @@ class GroupSerializer(serializers.ModelSerializer):
 class PermissionSerializer(serializers.ModelSerializer):
     class Meta:
         model = Permission
-        # Serialize the name and codename for clarity on the frontend
         fields = ("id", "name", "codename")
 
 
 class UserDetailSerializer(serializers.ModelSerializer):
     groups = GroupSerializer(many=True, read_only=True)
-    # It's useful to see a user's specific, directly assigned permissions
-    user_permissions = PermissionSerializer(many=True, read_only=True)
+
+    all_permissions = serializers.SerializerMethodField()
 
     class Meta:
         model = User
-        # Remove 'role' and add 'user_permissions' to the fields tuple
+        # Update the fields list to use our new 'all_permissions' field
         fields = (
             "id",
             "username",
@@ -39,7 +38,7 @@ class UserDetailSerializer(serializers.ModelSerializer):
             "date_joined",
             "last_login",
             "groups",
-            "user_permissions",
+            "all_permissions",  # Use the new field
         )
         read_only_fields = (
             "id",
@@ -49,25 +48,26 @@ class UserDetailSerializer(serializers.ModelSerializer):
             "date_joined",
             "last_login",
             "groups",
-            "user_permissions",
+            "all_permissions",
         )
 
+    def get_all_permissions(self, obj):
+        """
+        Gathers all permission codenames for the user, including those 
+        from groups, and returns them as a simple list of strings.
+        """
+        return sorted(list(obj.get_all_permissions()))
+
+
+
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
-    """
-    Custom token serializer to add user data to the login response.
-    """
     @classmethod
     def get_token(cls, user):
         token = super().get_token(user)
-        # You could add custom claims to the token here if needed
         return token
 
     def validate(self, attrs):
-        # The default validate method returns the access and refresh tokens.
         data = super().validate(attrs)
-        
-        # Serialize the user data and add it to the response.
         serializer = UserDetailSerializer(self.user)
-        data['user'] = serializer.data
-        
+        data["user"] = serializer.data
         return data
