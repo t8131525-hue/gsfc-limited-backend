@@ -11,5 +11,6 @@ class ParameterDefinitionViewSet(viewsets.ModelViewSet):
         permissions.IsAuthenticated,
         permissions.DjangoModelPermissions,
     ]
-    filter_backends = [DjangoFilterBackend]
     filterset_fields = ["product", "product_grade"]
+    filter_backends = [DjangoFilterBackend]
+    pagination_class = None 
