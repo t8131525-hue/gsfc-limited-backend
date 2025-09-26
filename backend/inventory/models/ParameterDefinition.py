@@ -76,83 +76,65 @@ class ParameterDefinition(AuditableMixin, models.Model):
     def __str__(self):
         return f"{self.name}" + (f" ({self.unit})" if self.unit else "")
 
-    def clean(self):
-        # Enforce that either product or product_grade is set, but not both.
-        if self.product and self.product_grade:
+    # In inventory/models/ParameterDefinition.py
+
+def clean(self):
+    # Enforce that either product or product_grade is set, but not both.
+    if self.product and self.product_grade:
+        raise ValidationError(
+            _(
+                "A parameter definition cannot be associated with both a Product and a Product Grade. Select EITHER one or the other."
+            ),
+            code="invalid_scope",
+        )
+    if not self.product and not self.product_grade:
+        raise ValidationError(
+            _(
+                "A parameter definition must be associated with either a Product or a Product Grade."
+            ),
+            code="missing_scope",
+        )
+
+    # Validate enum_options for ENUM type
+    if self.data_type == "ENUM":
+        if not self.enum_options:
+            raise ValidationError(
+                _("ENUM type parameters require 'enum_options'."),
+                code="enum_options_required",
+            )
+        if not isinstance(self.enum_options, list):
+            raise ValidationError(
+                _("'enum_options' must be a JSON array."),
+                code="enum_options_invalid_format",
+            )
+        if not all(isinstance(item, str) for item in self.enum_options):
+            raise ValidationError(
+                _("All items in 'enum_options' must be strings."),
+                code="enum_options_invalid_items",
+            )
+    else:
+        if self.enum_options:
+            raise ValidationError(
+                _("'enum_options' can only be set for ENUM data type."),
+                code="enum_options_not_allowed",
+            )
+        # Validate that boolean labels are handled correctly.
+    if self.data_type == "BOOLEAN":
+        if not self.boolean_true_label or not self.boolean_false_label:
             raise ValidationError(
                 _(
-                    "A parameter definition cannot be associated with both a Product and a Product Grade. Select EITHER one or the other."
+                    "For BOOLEAN data type, both 'True Label' and 'False Label' are required."
                 ),
-                code="invalid_scope",
+                code="boolean_labels_required",
             )
-        if not self.product and not self.product_grade:
+    else:
+        if self.boolean_true_label or self.boolean_false_label:
             raise ValidationError(
-                _(
-                    "A parameter definition must be associated with either a Product or a Product Grade."
-                ),
-                code="missing_scope",
+                _("Boolean labels can only be set for the BOOLEAN data type."),
+                code="boolean_labels_not_allowed",
             )
-
-        # Validate enum_options for ENUM type
-        if self.data_type == "ENUM":
-            if not self.enum_options:
-                raise ValidationError(
-                    _("ENUM type parameters require 'enum_options'."),
-                    code="enum_options_required",
-                )
-            if not isinstance(self.enum_options, list):
-                raise ValidationError(
-                    _("'enum_options' must be a JSON array."),
-                    code="enum_options_invalid_format",
-                )
-            if not all(isinstance(item, str) for item in self.enum_options):
-                raise ValidationError(
-                    _("All items in 'enum_options' must be strings."),
-                    code="enum_options_invalid_items",
-                )
-        else:
-            if self.enum_options:
-                raise ValidationError(
-                    _("'enum_options' can only be set for ENUM data type."),
-                    code="enum_options_not_allowed",
-                )
-            # Validate that boolean labels are handled correctly.
-        if self.data_type == "BOOLEAN":
-            if not self.boolean_true_label or not self.boolean_false_label:
-                raise ValidationError(
-                    _(
-                        "For BOOLEAN data type, both 'True Label' and 'False Label' are required."
-                    ),
-                    code="boolean_labels_required",
-                )
-        else:
-            if self.boolean_true_label or self.boolean_false_label:
-                raise ValidationError(
-                    _("Boolean labels can only be set for the BOOLEAN data type."),
-                    code="boolean_labels_not_allowed",
-                )
-        queryset = ParameterDefinition.objects.all()
-        if self.pk:
-            queryset = queryset.exclude(pk=self.pk)
-
-        if self.product:
-            if queryset.filter(
-                name=self.name, product=self.product, product_grade__isnull=True
-            ).exists():
-                raise ValidationError(
-                    _("A parameter with this name already exists for this product."),
-                    code="duplicate_product_parameter",
-                )
-        elif self.product_grade:
-            if queryset.filter(
-                name=self.name, product_grade=self.product_grade
-            ).exists():
-                raise ValidationError(
-                    _(
-                        "A parameter with this name already exists for this product grade."
-                    ),
-                    code="duplicate_grade_parameter",
-                )
+    # The redundant and buggy duplicate checks have been removed.
+    # The unique_together constraint in Meta will now correctly handle uniqueness.
 
     def save(self, *args, **kwargs):
         self.full_clean()

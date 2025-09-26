@@ -1,11 +1,15 @@
 from rest_framework import serializers
-from inventory.serializers.ProductGradeSerializer import ProductGradeSerializer
+from .ProductGradeSerializer import ProductGradeSerializer
 from inventory.models import Product
+from .ParameterDefinitionSerializer import ParameterDefinitionSerializer
+
 
 
 class ProductSerializer(serializers.ModelSerializer):
     grades = ProductGradeSerializer(many=True, read_only=True)
-
+    parameters = ParameterDefinitionSerializer(
+        source="parameters.filter(product_grade__isnull=True)", many=True, read_only=True
+    )
     class Meta:
         model = Product
         fields = [
@@ -15,6 +19,6 @@ class ProductSerializer(serializers.ModelSerializer):
             "description",
             "created_at",
             "updated_at",
-            "grades",
+            "grades", # This will now contain the grades AND their nested 
+            "parameters"
         ]
-        read_only_fields = ("created_at", "updated_at", "product_id")

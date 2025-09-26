@@ -1,14 +1,25 @@
 from rest_framework import serializers
 from ..models import ProductGrade
 from django.core.exceptions import ValidationError as DjangoValidationError
+from .ParameterDefinitionSerializer import ParameterDefinitionSerializer
 
 
 class ProductGradeSerializer(serializers.ModelSerializer):
     product_name = serializers.CharField(source="product.name", read_only=True)
+    parameters = ParameterDefinitionSerializer(many=True, read_only=True)
 
     class Meta:
         model = ProductGrade
-        fields = "__all__"
+        fields = [
+            "id",
+            "product_name",
+            "name",
+            "description",
+            "created_at",
+            "updated_at",
+            "product",
+            "parameters", # <-- Add this
+        ]
         read_only_fields = ("created_at", "updated_at")
 
     def validate(self, data):
