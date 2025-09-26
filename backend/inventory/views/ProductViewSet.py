@@ -15,7 +15,7 @@ from ..serializers.AssignAnalystSerializer import AssignAnalystSerializer
 User = get_user_model()
 
 class ProductViewSet(viewsets.ModelViewSet):
-    queryset = Product.objects.all().order_by("name")
+    queryset = Product.objects.all().order_by("-created_at")
     serializer_class = ProductSerializer
     permission_classes = [
         permissions.IsAuthenticated,
@@ -26,7 +26,7 @@ class ProductViewSet(viewsets.ModelViewSet):
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     search_fields = ["name", "product_id"]
     ordering_fields = ["name", "created_at"]
-    ordering = ["name"]
+    ordering = ["-created_at"]
     
     def get_serializer_class(self):
         """
