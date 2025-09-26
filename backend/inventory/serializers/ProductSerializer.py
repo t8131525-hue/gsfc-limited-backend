@@ -3,8 +3,6 @@ from .ProductGradeSerializer import ProductGradeSerializer
 from inventory.models import Product
 from .ParameterDefinitionSerializer import ParameterDefinitionSerializer
 
-
-
 class ProductSerializer(serializers.ModelSerializer):
     grades = ProductGradeSerializer(many=True, read_only=True)
     parameters = ParameterDefinitionSerializer(

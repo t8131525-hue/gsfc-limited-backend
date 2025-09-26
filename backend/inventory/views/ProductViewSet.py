@@ -2,6 +2,7 @@ from rest_framework import viewsets, permissions
 from rest_framework.decorators import action
 from ..models import Product
 from ..serializers import ProductSerializer
+from ..serializers.ProductListSerializer import ProductListSerializer
 from django_filters.rest_framework import DjangoFilterBackend
 from product_testing_system.pagination import StandardResultsSetPagination
 from rest_framework.filters import SearchFilter, OrderingFilter
@@ -26,6 +27,16 @@ class ProductViewSet(viewsets.ModelViewSet):
     search_fields = ["name", "product_id"]
     ordering_fields = ["name", "created_at"]
     ordering = ["name"]
+    
+    def get_serializer_class(self):
+        """
+        Return the appropriate serializer class based on the request action.
+        """
+        if self.action == 'list':
+            return ProductListSerializer 
+        
+        return ProductSerializer
+    
 
     @action(detail=True, methods=["get"])
     def parameters(self, request, pk=None):
