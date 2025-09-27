@@ -12,7 +12,7 @@ class Specification(AuditableMixin, models.Model):
     )
     version = models.PositiveIntegerField()
     is_active = models.BooleanField(
-        default=True,
+        default=False,
         help_text="Is this the current, active specification for new tests?",
     )
 
@@ -62,15 +62,30 @@ class Specification(AuditableMixin, models.Model):
             )
 
     def save(self, *args, **kwargs):
+        # --- NEW: Logic to auto-assign version number on creation ---
+        if self.pk is None and not self.version:
+            # Find the latest version for the same scope (product or grade)
+            latest_spec = Specification.objects.filter(
+                product=self.product, 
+                product_grade=self.product_grade
+            ).order_by('-version').first()
+
+            if latest_spec:
+                # If a version exists, increment it
+                self.version = latest_spec.version + 1
+            else:
+                # If this is the first version, start at 1
+                self.version = 1
+        # --- End of new logic ---
+
         if self.is_active and not self.activated_at:
             self.activated_at = now()
 
-        # Enforce only one active version per product/grade
         if self.is_active:
             queryset = Specification.objects.filter(is_active=True)
             if self.product:
                 queryset = queryset.filter(product=self.product)
-            else:  # self.product_grade
+            else:
                 queryset = queryset.filter(product_grade=self.product_grade)
 
             queryset.exclude(pk=self.pk).update(is_active=False)
