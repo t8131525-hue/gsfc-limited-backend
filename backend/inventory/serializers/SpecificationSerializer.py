@@ -22,7 +22,7 @@ class SpecificationSerializer(serializers.ModelSerializer):
         queryset=ParameterDefinition.objects.all(),
         many=True,
         write_only=True,
-        source="parameters",  # This maps the input to the 'parameters' model field
+        source="parameters", 
     )
 
     class Meta:
@@ -32,12 +32,12 @@ class SpecificationSerializer(serializers.ModelSerializer):
             "name",
             "version",
             "is_active",
-            "product",  # Used for writing (accepts a product ID)
-            "product_grade",  # Used for writing (accepts a grade ID)
-            "product_name",  # Used for reading
-            "product_grade_name",  # Used for reading
-            "parameters",  # The read-only, nested list of parameter details
-            "parameter_ids",  # The write-only list of parameter IDs
+            "product",  
+            "product_grade", 
+            "product_name",  
+            "product_grade_name", 
+            "parameters",  
+            "parameter_ids",  
             "created_at",
             "activated_at",
         ]
