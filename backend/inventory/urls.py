@@ -7,6 +7,7 @@ from inventory.views import (
     ProductGradeViewSet,
     ParameterDefinitionViewSet,
     TestRecordViewSet,
+    SpecificationViewSet,
     InventoryStatsView,
 )
 
@@ -16,6 +17,7 @@ router = DefaultRouter()
 router.register(r'products', ProductViewSet, basename='product')
 router.register(r'grades', ProductGradeViewSet, basename='productgrade')
 router.register(r'parameters', ParameterDefinitionViewSet, basename='parameterdefinition')
+router.register(r'specifications', SpecificationViewSet, basename='specification') 
 router.register(r'tests', TestRecordViewSet, basename='testrecord')
 
 urlpatterns = router.urls

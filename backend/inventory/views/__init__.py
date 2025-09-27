@@ -2,6 +2,7 @@
 
 from .InventoryStatsView import InventoryStatsView
 from .ParameterDefinitionViewSet import ParameterDefinitionViewSet
+from .SpecificationViewSet import SpecificationViewSet
 from .ProductGradeViewSet import ProductGradeViewSet
 from .ProductViewSet import ProductViewSet
 from .TestRecordViewSet import TestRecordViewSet
@@ -14,5 +15,6 @@ __all__ = [
     'ProductViewSet',
     'TestRecordViewSet',
     'TestResultViewSet',
+    'SpecificationViewSet'
 ]
 

@@ -1,5 +1,5 @@
 from audit_trail.mixins import AuditableMixin
-from django.db import models
+from django.db import models, transaction
 from django.core.exceptions import ValidationError
 from django.utils.translation import gettext_lazy as _
 from django.utils.timezone import now
@@ -18,14 +18,14 @@ class Specification(AuditableMixin, models.Model):
 
     # A Specification is for EITHER a Product OR a ProductGrade
     product = models.ForeignKey(
-        'inventory.Product',
+        "inventory.Product",
         on_delete=models.CASCADE,
         related_name="specifications",
         null=True,
         blank=True,
     )
     product_grade = models.ForeignKey(
-        'inventory.ProductGrade',
+        "inventory.ProductGrade",
         on_delete=models.CASCADE,
         related_name="specifications",
         null=True,
@@ -34,7 +34,7 @@ class Specification(AuditableMixin, models.Model):
 
     # The set of parameters that define this specific version.
     parameters = models.ManyToManyField(
-        'inventory.ParameterDefinition', related_name="specifications"
+        "inventory.ParameterDefinition", related_name="specifications"
     )
 
     created_at = models.DateTimeField(auto_now_add=True)
@@ -76,6 +76,34 @@ class Specification(AuditableMixin, models.Model):
             queryset.exclude(pk=self.pk).update(is_active=False)
 
         super().save(*args, **kwargs)
+
+    # NEW: A helper method to create a new version from an existing one.
+    @transaction.atomic
+    def create_new_version(self):
+        """
+        Creates a new, inactive version of this specification, copying all
+        of its current parameters. Returns the new specification instance.
+        """
+        if not self.pk:
+            raise Exception("Cannot create a new version of an unsaved specification.")
+
+        # Get the current parameters before creating the new spec
+        current_parameters = list(self.parameters.all())
+
+        # Create a new specification instance, cloning the old one
+        new_spec = Specification(
+            name=f"{self.name} (v{self.version + 1})",
+            version=self.version + 1,
+            is_active=False,  # New versions start as inactive drafts
+            product=self.product,
+            product_grade=self.product_grade,
+        )
+        new_spec.save()
+
+        # Set the parameters on the new specification
+        new_spec.parameters.set(current_parameters)
+
+        return new_spec
 
     def __str__(self):
         target = self.product or self.product_grade
