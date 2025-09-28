@@ -20,6 +20,3 @@ class ProductViewSet(viewsets.ModelViewSet):
         if self.action == 'list':
             return ProductListSerializer
         return ProductSerializer
-    
-    # ❌ The custom 'parameters' action has been removed.
-    # This data is now correctly nested under versions in the main serializer.

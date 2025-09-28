@@ -5,6 +5,7 @@ from .ParameterDefinitionSerializer import ParameterDefinitionSerializer
 from .ParameterDisplaySerializer import ParameterDisplaySerializer
 from .ProductGradeSerializer import ProductGradeSerializer
 from .ProductSerializer import ProductSerializer
+from .ProductListSerializer import ProductListSerializer
 from .TestRecordForAlertContextSerializer import TestRecordForAlertContextSerializer
 from .TestRecordSerializer import TestRecordSerializer
 from .TestResultDisplaySerializer import TestResultDisplaySerializer
@@ -13,16 +14,16 @@ from .VersionNestedSerializer import VersionNestedSerializer
 from .VersionSerializer import VersionSerializer
 
 __all__ = [
-    'AssignAnalystSerializer',
-    'ParameterDefinitionSerializer',
-    'ParameterDisplaySerializer',
-    'ProductGradeSerializer',
-    'ProductSerializer',
-    'TestRecordForAlertContextSerializer',
-    'TestRecordSerializer',
-    'TestResultDisplaySerializer',
-    'TestResultInputSerializer',
-    'VersionNestedSerializer',
-    'VersionSerializer',
+    "AssignAnalystSerializer",
+    "ParameterDefinitionSerializer",
+    "ParameterDisplaySerializer",
+    "ProductGradeSerializer",
+    "ProductSerializer",
+    "TestRecordForAlertContextSerializer",
+    "TestRecordSerializer",
+    "TestResultDisplaySerializer",
+    "TestResultInputSerializer",
+    "VersionNestedSerializer",
+    "VersionSerializer",
+    "ProductListSerializer",
 ]
-

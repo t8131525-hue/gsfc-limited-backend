@@ -16,17 +16,17 @@ class VersionSerializer(serializers.ModelSerializer):
         read_only_fields = ('status', 'is_active', 'created_by', 'locked_at', 'activated_at', 'created_at')
 
     def validate(self, data):
-        """
-        Runs the model's clean method to enforce business logic.
-        """
-        # Build an instance to run the model's validation
-        instance = self.instance or Version()
-        # Apply the new data to the instance
-        for attr, value in data.items():
-            setattr(instance, attr, value)
-
+        # If updating, use the existing instance.
+        # If creating, create a new instance WITH the incoming data.
+        instance = self.instance or Version(**data)
+        
+        # If updating, we still need to apply the changes before cleaning.
+        if self.instance:
+            for attr, value in data.items():
+                setattr(instance, attr, value)
+        
         try:
-            # This correctly runs your model's clean() method
+            # This now runs on an instance that has a 'product' attribute.
             instance.clean()
         except DjangoValidationError as e:
             raise serializers.ValidationError(e.message_dict)
