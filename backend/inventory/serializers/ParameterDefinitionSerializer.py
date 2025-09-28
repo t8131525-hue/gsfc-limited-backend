@@ -45,26 +45,19 @@ class ParameterDefinitionSerializer(serializers.ModelSerializer):
 
     def validate(self, data):
         """
-        Your excellent validation method. No changes needed here.
+        Runs the model's validation on a fully populated instance.
         """
-        # We need to build a complete instance to run full_clean
-        instance = self.instance or ParameterDefinition()
+        # If updating, use the existing instance.
+        # If creating, create a new instance WITH the incoming data.
+        instance = self.instance or ParameterDefinition(**data)
         
-        # Get related owner object for validation if creating
-        if 'content_type' in data and 'object_id' in data:
-            owner_model = data['content_type'].model_class()
-            try:
-                owner_instance = owner_model.objects.get(pk=data['object_id'])
-                instance.owner = owner_instance
-            except owner_model.DoesNotExist:
-                 raise serializers.ValidationError("The specified owner does not exist.")
-
-        # Apply the new data to the instance
-        for attr, value in data.items():
-            setattr(instance, attr, value)
-            
+        # If updating, apply changes to the instance before cleaning.
+        if self.instance:
+            for attr, value in data.items():
+                setattr(instance, attr, value)
+        
         try:
-            # This correctly runs your model's clean() method
+            # This now runs on an instance that has the necessary related fields.
             instance.full_clean()
         except DjangoValidationError as e:
             raise serializers.ValidationError(e.message_dict)
