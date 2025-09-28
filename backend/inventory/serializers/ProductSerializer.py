@@ -1,12 +1,13 @@
 from rest_framework import serializers
-from .ProductGradeSerializer import ProductGradeSerializer
-from inventory.models import Product
-from .ParameterDefinitionSerializer import ParameterDefinitionSerializer
+from ..models import Product
+# Make sure to import the new VersionNestedSerializer we defined above
+from .VersionNestedSerializer import VersionNestedSerializer # Adjust the import path as needed
 
 
 class ProductSerializer(serializers.ModelSerializer):
-    grades = ProductGradeSerializer(many=True, read_only=True)
-    parameters = serializers.SerializerMethodField()
+    # This correctly uses the related_name 'versions' from your Product model
+    # and our new nested serializer.
+    versions = VersionNestedSerializer(many=True, read_only=True)
 
     class Meta:
         model = Product
@@ -15,19 +16,10 @@ class ProductSerializer(serializers.ModelSerializer):
             "name",
             "product_id",
             "description",
+            "versions", # Display the nested versions instead of grades/parameters
             "created_at",
             "updated_at",
-            "grades",
-            "parameters",
         ]
 
-    def get_parameters(self, obj):
-        """
-        This method is called by the 'parameters' SerializerMethodField.
-        It filters the related parameters to include only those directly
-        linked to the product (where product_grade is null).
-        'obj' is the Product instance.
-        """
-        direct_params = obj.parameters.filter(product_grade__isnull=True)
-        # We use the ParameterDefinitionSerializer to serialize the filtered queryset.
-        return ParameterDefinitionSerializer(direct_params, many=True).data
+    # The old 'grades' and 'parameters' fields and the 'get_parameters' method
+    # are no longer needed and should be removed.

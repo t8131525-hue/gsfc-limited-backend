@@ -9,7 +9,8 @@ from .TestRecordForAlertContextSerializer import TestRecordForAlertContextSerial
 from .TestRecordSerializer import TestRecordSerializer
 from .TestResultDisplaySerializer import TestResultDisplaySerializer
 from .TestResultInputSerializer import TestResultInputSerializer
-from .SpecificationSerializer import SpecificationSerializer
+from .VersionNestedSerializer import VersionNestedSerializer
+from .VersionSerializer import VersionSerializer
 
 __all__ = [
     'AssignAnalystSerializer',
@@ -21,6 +22,7 @@ __all__ = [
     'TestRecordSerializer',
     'TestResultDisplaySerializer',
     'TestResultInputSerializer',
-    'SpecificationSerializer',
+    'VersionNestedSerializer',
+    'VersionSerializer',
 ]
 

@@ -3,7 +3,6 @@ from django.contrib.auth import get_user_model
 
 User = get_user_model()
 
-
 class AssignAnalystSerializer(serializers.Serializer):
     """
     A simple serializer to validate the analyst being assigned to a TestRecord.

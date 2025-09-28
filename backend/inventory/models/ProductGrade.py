@@ -1,20 +1,24 @@
 from audit_trail.mixins import AuditableMixin
 from django.db import models
 from django.core.exceptions import ValidationError
-from inventory.models import ParameterDefinition
+from django.utils.translation import gettext_lazy as _
+from django.contrib.contenttypes.fields import GenericRelation
+
 
 
 class ProductGrade(AuditableMixin, models.Model):
-    product = models.ForeignKey(
-        'inventory.Product', on_delete=models.CASCADE, related_name="grades"
+    version = models.ForeignKey(
+    "inventory.Version", on_delete=models.CASCADE, related_name="grades"
     )
+    parameters = GenericRelation("inventory.ParameterDefinition", related_query_name="grade")
+
     name = models.CharField(max_length=255)
     description = models.TextField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        unique_together = ("product", "name")
+        unique_together = ("version", "name")
         verbose_name = "Product Grade"
         verbose_name_plural = "Product Grades"
         permissions = [
@@ -26,20 +30,14 @@ class ProductGrade(AuditableMixin, models.Model):
         ]
 
     def clean(self):
-
-        # Rule: A product cannot have grades if it already has direct parameters.
-        if (
-            self.product
-            and ParameterDefinition.objects.filter(
-                product=self.product, product_grade__isnull=True
-            ).exists()
-        ):
+        # NEW: Validation to ensure grades can only be added to a DRAFT specification.
+        if self.version and self.version.status == "LOCKED":
             raise ValidationError(
-                {
-                    "product": f"Product '{self.product.name}' already has direct, grade-less parameters defined. It cannot also have grades."
-                }
+                _(
+                    "Cannot add or change grades on a LOCKED version. Create a new version."
+                )
             )
         super().clean()
 
     def __str__(self):
-        return f"{self.product.name} - {self.name}"
+        return f"{self.version.product.name} - {self.name} (Version: {self.version.version_name})"

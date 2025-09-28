@@ -1,56 +1,25 @@
 from rest_framework import viewsets, permissions
-from rest_framework.decorators import action
 from ..models import Product
-from ..serializers import ProductSerializer
-from ..serializers.ProductListSerializer import ProductListSerializer
+from ..serializers import ProductSerializer, ProductListSerializer
 from django_filters.rest_framework import DjangoFilterBackend
 from product_testing_system.pagination import StandardResultsSetPagination
 from rest_framework.filters import SearchFilter, OrderingFilter
-from django.utils import timezone
-from django.db import transaction
-from django.contrib.auth import get_user_model
-from audit_trail.utils import log_custom_event
-from ..serializers.AssignAnalystSerializer import AssignAnalystSerializer
-
-User = get_user_model()
 
 class ProductViewSet(viewsets.ModelViewSet):
     queryset = Product.objects.all().order_by("-created_at")
     serializer_class = ProductSerializer
-    permission_classes = [
-        permissions.IsAuthenticated,
-        permissions.DjangoModelPermissions,
-    ]
-    filter_backends = [DjangoFilterBackend, SearchFilter]
+    permission_classes = [permissions.IsAuthenticated, permissions.DjangoModelPermissions]
     pagination_class = StandardResultsSetPagination
+    # Cleaned up filter backends
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     search_fields = ["name", "product_id"]
     ordering_fields = ["name", "created_at"]
     ordering = ["-created_at"]
     
     def get_serializer_class(self):
-        """
-        Return the appropriate serializer class based on the request action.
-        """
         if self.action == 'list':
-            return ProductListSerializer 
-        
+            return ProductListSerializer
         return ProductSerializer
     
-
-    @action(detail=True, methods=["get"])
-    def parameters(self, request, pk=None):
-        """
-        A custom endpoint to retrieve all parameter definitions associated
-        with a specific product, including parameters linked to its grades.
-        """
-        product = self.get_object()
-
-        # This query finds all parameters linked directly to the product
-        # OR linked to any of the product's grades.
-        parameters_queryset = ParameterDefinition.objects.filter(
-            Q(product=product) | Q(product_grade__product=product)
-        ).distinct()
-
-        serializer = ParameterDefinitionSerializer(parameters_queryset, many=True)
-        return Response(serializer.data)
+    # ❌ The custom 'parameters' action has been removed.
+    # This data is now correctly nested under versions in the main serializer.

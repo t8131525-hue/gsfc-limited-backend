@@ -8,6 +8,7 @@ from ..filters import TestRecordFilter
 from rest_framework.response import Response
 from rest_framework.decorators import action
 from rest_framework import viewsets, permissions, status
+
 # Add all of these at the top of the file
 from django.utils import timezone
 from django.db import transaction
@@ -17,50 +18,39 @@ from ..serializers.AssignAnalystSerializer import AssignAnalystSerializer
 
 User = get_user_model()
 
-class TestRecordViewSet(viewsets.ModelViewSet):
-    """
-    Manages Test Records, including creation, approval, rejection,
-    and ordering of retests.
-    """
 
-    queryset = TestRecord.objects.all().order_by("-created_at")
+class TestRecordViewSet(viewsets.ModelViewSet):
+    queryset = (
+        TestRecord.objects.all()
+    )  # We define the detailed queryset in get_queryset
     serializer_class = TestRecordSerializer
     permission_classes = [
         permissions.IsAuthenticated,
         permissions.DjangoModelPermissions,
     ]
-    filter_backends = [DjangoFilterBackend]
-    filterset_class = TestRecordFilter
-    filterset_fields = ["product", "product_grade", "analyst", "status"]
     pagination_class = StandardResultsSetPagination
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
-    filterset_fields = ["status", "analyst"]
-    search_fields = ["sample_id", "batch_no", "product__name", "record_id"]
+    # Corrected filter and search fields
+    filterset_fields = ["version__product", "product_grade", "analyst", "status"]
+    search_fields = ["sample_id", "batch_no", "version__product__name", "record_id"]
     ordering_fields = ["created_at", "analyst__username", "status"]
     ordering = ["-created_at"]
 
     def get_queryset(self):
-        """
-        Dynamically filters the queryset based on user permissions.
-        - Users with 'can_view_all_test_records' see all records.
-        - Other users (e.g., analysts) only see records assigned to them.
-        """
         user = self.request.user
-
-        # Start with an optimized base queryset
         queryset = (
             TestRecord.objects.select_related(
-                "product", "product_grade", "analyst", "approved_by", "retest_of"
+                "version__product",
+                "product_grade",
+                "analyst",
+                "approved_by",
+                "retest_of",
             )
             .prefetch_related("parameter_values__parameter")
             .all()
         )
-
-        # If the user does NOT have the permission to view all records,
-        # filter the queryset to only show records assigned to them.
         if not user.has_perm("inventory.can_view_all_test_records"):
             queryset = queryset.filter(analyst=user)
-
         return queryset
 
     def get_serializer_context(self):
@@ -116,11 +106,6 @@ class TestRecordViewSet(viewsets.ModelViewSet):
         detail=True, methods=["post"], permission_classes=[permissions.IsAuthenticated]
     )
     def order_retest(self, request, pk=None):
-        """
-        Orders a retest and assigns it to a specific analyst.
-        This creates a new PENDING_RETEST test record and updates the
-        original record's status to RETEST_ORDERED.
-        """
         user = request.user
         if not user.has_perm("inventory.can_approve_test_records"):
             return Response(
@@ -129,48 +114,40 @@ class TestRecordViewSet(viewsets.ModelViewSet):
             )
 
         original_test = self.get_object()
-
         if original_test.status not in ["APPROVED", "REJECTED"]:
             return Response(
                 {
-                    "detail": f"Can only order a retest for a record that is 'APPROVED' or 'REJECTED'."
+                    "detail": "Can only order a retest for a record that is 'APPROVED' or 'REJECTED'."
                 },
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        # Validate the incoming analyst_id using our serializer
         serializer = AssignAnalystSerializer(data=request.data)
         if not serializer.is_valid():
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-        analyst_id = serializer.validated_data["analyst_id"]
-        analyst_to_assign = User.objects.get(pk=analyst_id)
+        analyst_to_assign = serializer.validated_data["analyst"]
 
         with transaction.atomic():
-            # 1. Update the original record's status
             original_test.status = "RETEST_ORDERED"
             original_test.save()
 
-            # 2. Create the new TestRecord for the retest, now with an analyst
+            # Create the new TestRecord using the version, not the product
             new_test = TestRecord.objects.create(
-                product=original_test.product,
+                version=original_test.version,  # <-- Corrected
                 product_grade=original_test.product_grade,
                 batch_no=original_test.batch_no,
                 sample_id=original_test.sample_id,
-                status="RETEST",  # Use the new specific status
-                analyst=analyst_to_assign,  # Assign the analyst immediately
+                status="RETEST",
+                analyst=analyst_to_assign,
                 retest_of=original_test,
             )
-
-            # 3. Log the event against the original test record
             log_custom_event(
                 instance=original_test,
                 action_type="RETEST_ORDERED",
                 user=user,
                 details=f"Retest ordered by {user.username} and assigned to {analyst_to_assign.username}. New record: {new_test.record_id}",
             )
-
-        # Return the newly created test record
         response_serializer = self.get_serializer(new_test)
         return Response(response_serializer.data, status=status.HTTP_201_CREATED)
 

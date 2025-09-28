@@ -1,6 +1,7 @@
 from django.db import models
 from audit_trail.mixins import AuditableMixin
-
+from django.db.models.signals import post_save
+from django.dispatch import receiver
 
 class Product(AuditableMixin, models.Model):
     name = models.CharField(max_length=255, unique=True)
@@ -26,9 +27,10 @@ class Product(AuditableMixin, models.Model):
     def __str__(self):
         return self.name
 
-    def save(self, *args, **kwargs):
-        is_new = self.pk is None
-        super().save(*args, **kwargs)  
-        if is_new and not self.product_id:
-            self.product_id = f"Product{self.pk:003d}"
-            super().save(update_fields=["product_id"])
+    
+# ✅ ADD THIS at the bottom of the file
+@receiver(post_save, sender=Product)
+def assign_product_id(sender, instance, created, **kwargs):
+    if created and not instance.product_id:
+        instance.product_id = f"Product{instance.pk:003d}"
+        Product.objects.filter(pk=instance.pk).update(product_id=instance.product_id)
