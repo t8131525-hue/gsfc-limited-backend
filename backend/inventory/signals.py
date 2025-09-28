@@ -6,15 +6,14 @@ from django.core.exceptions import ValidationError
 from .models import Specification
 
 @receiver(m2m_changed, sender=Specification.parameters.through)
-def prevent_active_spec_parameter_change(sender, instance, action, **kwargs):
+def prevent_locked_spec_parameter_change(sender, instance, action, **kwargs):
     """
-    Prevents adding or removing parameters from a Specification that is active.
-    This enforces the 'immutable contract' rule for historical data integrity.
+    Prevents adding or removing parameters from a Specification that is LOCKED.
     """
     if action in ["pre_add", "pre_remove", "pre_clear"]:
-        # 'instance' here is the Specification object being modified.
-        if instance.is_active:
+        # REVAMPED: We now check the 'status' instead of 'is_active'.
+        if instance.status == 'LOCKED':
             raise ValidationError(
-                f"Cannot change parameters on an active specification (v{instance.version}). "
-                f"Please create a new version to make changes."
+                f"Cannot change parameters on a LOCKED specification (v{instance.version}). "
+                f"Create a new version to make changes."
             )

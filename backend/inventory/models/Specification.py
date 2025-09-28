@@ -1,3 +1,5 @@
+# inventory/models/Specification.py
+
 from audit_trail.mixins import AuditableMixin
 from django.db import models, transaction
 from django.core.exceptions import ValidationError
@@ -6,6 +8,18 @@ from django.utils.timezone import now
 
 
 class Specification(AuditableMixin, models.Model):
+    # NEW: Status field to manage the Draft -> Locked workflow
+    STATUS_CHOICES = [
+        ("DRAFT", "Draft"),
+        ("LOCKED", "Locked"),
+    ]
+    status = models.CharField(
+        max_length=10,
+        choices=STATUS_CHOICES,
+        default="DRAFT",
+        help_text="DRAFT specs can be edited. LOCKED specs are immutable historical records.",
+    )
+
     name = models.CharField(
         max_length=255,
         help_text="A descriptive name for this version, e.g., 'v1.0 - Initial Release'",
@@ -13,10 +27,8 @@ class Specification(AuditableMixin, models.Model):
     version = models.PositiveIntegerField()
     is_active = models.BooleanField(
         default=False,
-        help_text="Is this the current, active specification for new tests?",
+        help_text="Is this the current, active specification for new tests? Only LOCKED specs can be active.",
     )
-
-    # A Specification is for EITHER a Product OR a ProductGrade
     product = models.ForeignKey(
         "inventory.Product",
         on_delete=models.CASCADE,
@@ -31,12 +43,9 @@ class Specification(AuditableMixin, models.Model):
         null=True,
         blank=True,
     )
-
-    # The set of parameters that define this specific version.
     parameters = models.ManyToManyField(
         "inventory.ParameterDefinition", related_name="specifications"
     )
-
     created_at = models.DateTimeField(auto_now_add=True)
     activated_at = models.DateTimeField(
         null=True,
@@ -45,13 +54,11 @@ class Specification(AuditableMixin, models.Model):
     )
 
     class Meta:
-        # Ensure version numbers are unique per product/grade
         unique_together = [("product", "version"), ("product_grade", "version")]
         verbose_name = "Specification Version"
         verbose_name_plural = "Specification Versions"
 
     def clean(self):
-        # Enforce that either product or product_grade is set, but not both.
         if self.product and self.product_grade:
             raise ValidationError(
                 _("A specification can't be for both a Product and a Product Grade.")
@@ -61,25 +68,31 @@ class Specification(AuditableMixin, models.Model):
                 _("A specification must be for either a Product or a Product Grade.")
             )
 
-    def save(self, *args, **kwargs):
-        # --- NEW: Logic to auto-assign version number on creation ---
-        if self.pk is None and not self.version:
-            # Find the latest version for the same scope (product or grade)
-            latest_spec = Specification.objects.filter(
-                product=self.product, 
-                product_grade=self.product_grade
-            ).order_by('-version').first()
+        # NEW: Add a rule to ensure only LOCKED specs can be made active.
+        if self.is_active and self.status != "LOCKED":
+            raise ValidationError(
+                {
+                    "is_active": _(
+                        "Cannot activate a specification that is still a DRAFT. Please lock it first."
+                    )
+                }
+            )
 
-            if latest_spec:
-                # If a version exists, increment it
-                self.version = latest_spec.version + 1
-            else:
-                # If this is the first version, start at 1
-                self.version = 1
-        # --- End of new logic ---
+    def save(self, *args, **kwargs):
+        if self.pk is None and not self.version:
+            latest_spec = (
+                Specification.objects.filter(
+                    product=self.product, product_grade=self.product_grade
+                )
+                .order_by("-version")
+                .first()
+            )
+            self.version = latest_spec.version + 1 if latest_spec else 1
 
         if self.is_active and not self.activated_at:
             self.activated_at = now()
+        elif not self.is_active:
+            self.activated_at = None
 
         if self.is_active:
             queryset = Specification.objects.filter(is_active=True)
@@ -87,35 +100,27 @@ class Specification(AuditableMixin, models.Model):
                 queryset = queryset.filter(product=self.product)
             else:
                 queryset = queryset.filter(product_grade=self.product_grade)
-
             queryset.exclude(pk=self.pk).update(is_active=False)
 
         super().save(*args, **kwargs)
 
-    # NEW: A helper method to create a new version from an existing one.
     @transaction.atomic
     def create_new_version(self):
-        """
-        Creates a new, inactive version of this specification, copying all
-        of its current parameters. Returns the new specification instance.
-        """
         if not self.pk:
             raise Exception("Cannot create a new version of an unsaved specification.")
 
-        # Get the current parameters before creating the new spec
         current_parameters = list(self.parameters.all())
 
-        # Create a new specification instance, cloning the old one
         new_spec = Specification(
             name=f"{self.name} (v{self.version + 1})",
             version=self.version + 1,
-            is_active=False,  # New versions start as inactive drafts
+            # REVAMPED: New versions are always inactive drafts.
+            status="DRAFT",
+            is_active=False,
             product=self.product,
             product_grade=self.product_grade,
         )
         new_spec.save()
-
-        # Set the parameters on the new specification
         new_spec.parameters.set(current_parameters)
 
         return new_spec
