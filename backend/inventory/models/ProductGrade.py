@@ -10,7 +10,7 @@ class ProductGrade(AuditableMixin, models.Model):
     version = models.ForeignKey(
     "inventory.Version", on_delete=models.CASCADE, related_name="grades"
     )
-    parameters = GenericRelation("inventory.ParameterDefinition", related_query_name="grade")
+    parameters = GenericRelation("inventory.ParameterDefinition")
 
     name = models.CharField(max_length=255)
     description = models.TextField(blank=True, null=True)
