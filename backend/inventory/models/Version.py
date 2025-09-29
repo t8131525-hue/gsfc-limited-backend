@@ -19,8 +19,12 @@ class Version(AuditableMixin, models.Model):
         # REVAMPED: Updated related_name
         related_name="versions",
     )
-    parameters = GenericRelation("inventory.ParameterDefinition", related_query_name="version")
-
+    parameters = GenericRelation(
+        "inventory.ParameterDefinition",
+        content_type_field="content_type",
+        object_id_field="object_id",
+        related_query_name="version",
+    )
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default="DRAFT")
     version_name = models.CharField(
         max_length=100, help_text="User-defined version, e.g., 'v1.0', '2025 Q4 Update'"
@@ -100,13 +104,13 @@ class Version(AuditableMixin, models.Model):
             # REVAMPED: Link to the new 'version' instance
             grade.version = new_version
             grade.save()
-        
+
         for param in self.parameters.all():
             param.pk = None
             # REVAMPED: Link to the new 'version' instance
-            param.owner = new_version 
+            param.owner = new_version
             param.save()
-            
+
         return new_version
 
     def __str__(self):

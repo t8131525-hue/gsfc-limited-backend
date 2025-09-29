@@ -13,7 +13,8 @@ class VersionSerializer(serializers.ModelSerializer):
             'status', 'is_active', 'created_by', 'created_by_username',
             'created_at', 'locked_at', 'activated_at'
         ]
-        read_only_fields = ('status', 'is_active', 'created_by', 'locked_at', 'activated_at', 'created_at')
+        read_only_fields = ('created_by', 'locked_at', 'activated_at', 'created_at')
+
 
     def validate(self, data):
         # If updating, use the existing instance.
