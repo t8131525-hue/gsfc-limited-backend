@@ -7,7 +7,7 @@ from django.utils.translation import gettext_lazy as _
 from django.utils.timezone import now
 from django.conf import settings
 from django.contrib.contenttypes.fields import GenericRelation
-
+from django.contrib.contenttypes.models import ContentType
 
 # REVAMPED: Renamed class from Specification to Version
 class Version(AuditableMixin, models.Model):
@@ -19,12 +19,7 @@ class Version(AuditableMixin, models.Model):
         # REVAMPED: Updated related_name
         related_name="versions",
     )
-    parameters = GenericRelation(
-        "inventory.ParameterDefinition",
-        content_type_field="content_type",
-        object_id_field="object_id",
-        related_query_name="version",
-    )
+    parameters = GenericRelation("inventory.ParameterDefinition")
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default="DRAFT")
     version_name = models.CharField(
         max_length=100, help_text="User-defined version, e.g., 'v1.0', '2025 Q4 Update'"
@@ -93,22 +88,26 @@ class Version(AuditableMixin, models.Model):
 
     @transaction.atomic
     def create_new_version_from_this(self):
-        # REVAMPED: Use the new class name here
         new_version = Version.objects.create(
             product=self.product,
             created_by=self.created_by,
             version_name=f"Draft of {self.version_name}",
         )
+
+        # This part is for cloning grades (looks okay)
         for grade in self.grades.all():
             grade.pk = None
-            # REVAMPED: Link to the new 'version' instance
             grade.version = new_version
             grade.save()
 
+        # ✅ THIS PART IS THE FIX for cloning direct parameters
+        # Get the ContentType for the Version model once
+        version_content_type = ContentType.objects.get_for_model(Version)
         for param in self.parameters.all():
             param.pk = None
-            # REVAMPED: Link to the new 'version' instance
-            param.owner = new_version
+            # You must set content_type and object_id directly
+            param.content_type = version_content_type
+            param.object_id = new_version.pk
             param.save()
 
         return new_version
