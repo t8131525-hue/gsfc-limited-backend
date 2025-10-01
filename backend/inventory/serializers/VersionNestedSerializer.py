@@ -17,8 +17,10 @@ class VersionNestedSerializer(serializers.ModelSerializer):
         model = Version
         fields = [
             'id', 'version_name', 'status', 'is_active', 
-            'description', 'parameters', 'grades'
+            'description', 'parameters', 'grades',
+            'created_at', 'locked_at', 'activated_at'
         ]
+
 
     # ✅ 2. Add this method to explicitly define how to get the parameters.
     def get_parameters(self, obj):
