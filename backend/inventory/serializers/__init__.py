@@ -13,6 +13,8 @@ from .TestResultInputSerializer import TestResultInputSerializer
 from .VersionNestedSerializer import VersionNestedSerializer
 from .VersionSerializer import VersionSerializer
 from .LabSerializer import LabSerializer
+from .HistoricalTestRecordSerializer import HistoricalTestRecordSerializer
+from .RecentTestRecordSerializer import RecentTestRecordSerializer
 
 __all__ = [
     "AssignAnalystSerializer",
@@ -28,5 +30,8 @@ __all__ = [
     "VersionSerializer",
     "ProductListSerializer",
     "LabSerializer",
+    "HistoricalTestRecordSerializer",
+    "RecentTestRecordSerializer",
+
 ]
 

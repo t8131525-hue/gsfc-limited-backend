@@ -5,9 +5,15 @@ from ..serializers import TestRecordSerializer
 from product_testing_system.pagination import StandardResultsSetPagination
 from rest_framework.filters import SearchFilter, OrderingFilter
 from ..filters import TestRecordFilter
+from django.utils import timezone
 from rest_framework.response import Response
 from rest_framework.decorators import action
 from rest_framework import viewsets, permissions, status
+from ..serializers import (
+    TestRecordSerializer,
+    RecentTestRecordSerializer,
+    HistoricalTestRecordSerializer,
+)
 
 # Add all of these at the top of the file
 from django.utils import timezone
@@ -20,43 +26,62 @@ User = get_user_model()
 
 
 class TestRecordViewSet(viewsets.ModelViewSet):
-    queryset = (
-        TestRecord.objects.all()
-    )  # We define the detailed queryset in get_queryset
+    # The base queryset is simple; logic is moved to get_queryset
+    queryset = TestRecord.objects.all()
+    # The default serializer for retrieve/create/update actions
     serializer_class = TestRecordSerializer
-    permission_classes = [
-        permissions.IsAuthenticated,
-        permissions.DjangoModelPermissions,
-    ]
+    permission_classes = [permissions.IsAuthenticated]
     pagination_class = StandardResultsSetPagination
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
-    # Corrected filter and search fields
-    filterset_fields = ["version__product", "product_grade", "analyst", "status"]
+
+    # ✅ USE THE CUSTOM FILTER CLASS
+    filterset_class = TestRecordFilter
+
     search_fields = ["sample_id", "batch_no", "version__product__name", "record_id"]
     ordering_fields = ["created_at", "analyst__username", "status"]
     ordering = ["-created_at"]
 
+    # ✅ THIS METHOD IS NOW SMARTER
     def get_queryset(self):
+        """
+        Dynamically filters the queryset.
+        - Non-managers only see their own records.
+        - The 'Recent' view is automatically filtered for today's date.
+        """
         user = self.request.user
-        queryset = (
-            TestRecord.objects.select_related(
-                "version__product",
-                "product_grade",
-                "analyst",
-                "approved_by",
-                "retest_of",
-            )
-            .prefetch_related("parameter_values__parameter")
-            .all()
-        )
+        view_type = self.request.query_params.get("view_type", "recent")
+
+        # Base queryset with performance optimizations
+        queryset = TestRecord.objects.select_related(
+            "version__product", "product_grade", "analyst", "lab"
+        ).all()
+
+        # Permission-based filtering
         if not user.has_perm("inventory.can_view_all_test_records"):
             queryset = queryset.filter(analyst=user)
+
+        # Automatic date filtering for the "Recent" view
+        if view_type == "recent":
+            today = timezone.now().date()
+            queryset = queryset.filter(created_at__date=today)
+
         return queryset
 
-    def get_serializer_context(self):
-        context = super().get_serializer_context()
-        context["request"] = self.request
-        return context
+    # ✅ ADD THIS METHOD TO CHOOSE THE SERIALIZER DYNAMICALLY
+    def get_serializer_class(self):
+        """
+        Chooses the serializer based on the action and view type.
+        - 'list' action gets a lightweight serializer.
+        - Other actions (retrieve, create, update) get the full serializer.
+        """
+        if self.action == "list":
+            view_type = self.request.query_params.get("view_type", "recent")
+            if view_type == "historical":
+                return HistoricalTestRecordSerializer
+            return RecentTestRecordSerializer
+
+        # For 'retrieve', 'create', 'update', 'partial_update', etc.
+        return TestRecordSerializer
 
     @action(
         detail=True, methods=["patch"], permission_classes=[permissions.IsAuthenticated]
