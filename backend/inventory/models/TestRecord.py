@@ -131,11 +131,11 @@ class TestRecord(AuditableMixin, models.Model):
                     code="invalid_product_grade_product_mismatch",
                 )
 
-            if self.status not in ["APPROVED", "REJECTED", "RETEST_ORDERED"]:
+            if self.status not in ["APPROVED", "REJECTED", "RETEST_ORDERED", "CLOSED"]:
                 if self.approved_by or self.approved_at:
                     raise ValidationError(
                         (
-                            "Approval details can only be set when the status is 'APPROVED', 'REJECTED', or 'RETEST_ORDERED'."
+                            "Approval details can only be set when the status is 'APPROVED', 'REJECTED', 'RETEST_ORDERED', or 'CLOSED'."
                         ),
                         code="invalid_approval_details",
                     )

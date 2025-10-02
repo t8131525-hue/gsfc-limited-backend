@@ -238,3 +238,42 @@ class TestRecordViewSet(viewsets.ModelViewSet):
 
         serializer = self.get_serializer(test_record)
         return Response(serializer.data)
+
+    # ✅ NEW ACTION: Add this entire method to your TestRecordViewSet class
+    @action(
+        detail=True, methods=["post"], permission_classes=[permissions.IsAuthenticated]
+    )
+    def close_record(self, request, pk=None):
+        """
+        Closes an APPROVED or REJECTED test record. This is a final state.
+        """
+        user = request.user
+        if not user.has_perm("inventory.can_approve_test_records"):
+            return Response(
+                {"detail": "You do not have permission to close records."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        test_record = self.get_object()
+
+        if test_record.status not in ["APPROVED", "REJECTED"]:
+            return Response(
+                {
+                    "detail": f"Cannot close a record with status '{test_record.status}'. Only 'APPROVED' or 'REJECTED' records can be closed."
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        old_status = test_record.status
+        test_record.status = "CLOSED"
+        test_record.save()
+
+        log_custom_event(
+            instance=test_record,
+            action_type="CLOSED",
+            user=user,
+            details=f"Record status changed from {old_status} to CLOSED by {user.username}.",
+        )
+
+        serializer = self.get_serializer(test_record)
+        return Response(serializer.data, status=status.HTTP_200_OK)
