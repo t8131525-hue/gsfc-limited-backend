@@ -138,7 +138,7 @@ class TestRecordViewSet(viewsets.ModelViewSet):
                 product_grade=original_test.product_grade,
                 batch_no=original_test.batch_no,
                 sample_id=original_test.sample_id,
-                status="RETEST",
+                status="PENDING",
                 analyst=analyst_to_assign,
                 retest_of=original_test,
             )

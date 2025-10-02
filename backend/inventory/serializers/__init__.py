@@ -12,6 +12,7 @@ from .TestResultDisplaySerializer import TestResultDisplaySerializer
 from .TestResultInputSerializer import TestResultInputSerializer
 from .VersionNestedSerializer import VersionNestedSerializer
 from .VersionSerializer import VersionSerializer
+from .LabSerializer import LabSerializer
 
 __all__ = [
     "AssignAnalystSerializer",
@@ -26,4 +27,6 @@ __all__ = [
     "VersionNestedSerializer",
     "VersionSerializer",
     "ProductListSerializer",
+    "LabSerializer",
 ]
+

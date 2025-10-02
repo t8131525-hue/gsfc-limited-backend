@@ -7,6 +7,7 @@ from .ProductGradeViewSet import ProductGradeViewSet
 from .ProductViewSet import ProductViewSet
 from .TestRecordViewSet import TestRecordViewSet
 from .TestResultViewSet import TestResultViewSet
+from .LabViewSet import LabViewSet
 
 __all__ = [
     "InventoryStatsView",
@@ -16,4 +17,5 @@ __all__ = [
     "TestRecordViewSet",
     "TestResultViewSet",
     "VersionViewSet",
+    "LabViewSet",
 ]

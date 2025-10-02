@@ -25,7 +25,7 @@ class TestResult(AuditableMixin, models.Model):
         unique_together = (
             "test_record",
             "parameter",
-        )  # A parameter can only have one value per test record
+        )
         verbose_name = "Test Result"
         verbose_name_plural = "Test Results"
 
@@ -41,7 +41,6 @@ class TestResult(AuditableMixin, models.Model):
         has_string = self.value_string is not None
         has_boolean = self.value_boolean is not None
 
-        # Count how many value fields are populated
         num_values_provided = sum([has_decimal, has_string, has_boolean])
 
         if param_def.is_required and num_values_provided == 0:
@@ -69,7 +68,6 @@ class TestResult(AuditableMixin, models.Model):
                 f"A string value is not allowed for the '{param_def.name}' parameter (type: {param_def.data_type})."
             )
 
-        # Specific validation for ENUM types
         if param_def.data_type == "ENUM":
             if self.value_string not in (param_def.enum_options or []):
                 raise ValidationError(
@@ -77,11 +75,19 @@ class TestResult(AuditableMixin, models.Model):
                     f"Valid options are: {', '.join(param_def.enum_options or [])}"
                 )
 
+        # # --- ADDED VALIDATION ---
+        # # Check if the decimal value is within the min/max range defined in the parameter.
+        # if has_decimal:
+        #     if param_def.min_value is not None and self.value_decimal < param_def.min_value:
+        #         raise ValidationError(
+        #             f"Value {self.value_decimal} is below the minimum allowed value of {param_def.min_value} for '{param_def.name}'."
+        #         )
+        #     if param_def.max_value is not None and self.value_decimal > param_def.max_value:
+        #         raise ValidationError(
+        #             f"Value {self.value_decimal} is above the maximum allowed value of {param_def.max_value} for '{param_def.name}'."
+        #         )
+
     def save(self, *args, **kwargs):
-        """
-        The alert generation logic has been moved to alerts/signals.py.
-        This method now only handles validation and saving.
-        """
         self.full_clean()
         super().save(*args, **kwargs)
 

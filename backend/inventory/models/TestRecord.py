@@ -50,7 +50,7 @@ class TestRecord(AuditableMixin, models.Model):
         ("PENDING", "Pending"),
         ("APPROVED", "Approved"),
         ("REJECTED", "Rejected"),
-        ("RETEST", "Retest"),
+        ("CLOSED", "Closed"),
         ("RETEST_ORDERED", "Retest Ordered"),
     ]
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="PENDING")
@@ -82,8 +82,6 @@ class TestRecord(AuditableMixin, models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
-    # --- (Your Meta class, clean(), save(), and __str__() methods follow) ---
-
     class Meta:
         verbose_name = "Test Record"
         verbose_name_plural = "Test Records"
@@ -97,11 +95,18 @@ class TestRecord(AuditableMixin, models.Model):
             ),
         ]
 
-    # In the TestRecord model's clean() method
     def clean(self):
         if self.version:
-            # 👇 Corrected logic to check the version, not the product
-            has_grades = self.version.grades.exists()
+            # --- ADDED VALIDATION ---
+            # Ensure that tests are only performed against a locked specification.
+            if self.version.status != "LOCKED":
+                raise ValidationError(
+                    _(
+                        "Test records can only be created for versions that are 'LOCKED'."
+                    )
+                )
+
+            has_grades = self.version.grades.exists()  #
 
             if has_grades and not self.product_grade:
                 raise ValidationError(
@@ -118,7 +123,6 @@ class TestRecord(AuditableMixin, models.Model):
                     code="product_grade_not_allowed",
                 )
 
-            # 👇 Corrected logic to check grade belongs to the version
             if self.product_grade and self.product_grade.version != self.version:
                 raise ValidationError(
                     _(
@@ -146,6 +150,7 @@ class TestRecord(AuditableMixin, models.Model):
                 last_record = (
                     TestRecord.objects.select_for_update()
                     .filter(created_at__date=self.created_at.date())
+                    .exclude(pk=self.pk)
                     .order_by("pk")
                     .last()
                 )

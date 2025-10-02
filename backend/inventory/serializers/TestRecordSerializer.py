@@ -16,6 +16,7 @@ class TestRecordSerializer(serializers.ModelSerializer):
     product_grade_name = serializers.CharField(
         source="product_grade.name", read_only=True, allow_null=True
     )
+    lab_name = serializers.CharField(source="lab.name", read_only=True)
     record_id = serializers.CharField(read_only=True)
     retest_record_id = serializers.CharField(
         source="retest_of.record_id", read_only=True
@@ -32,6 +33,7 @@ class TestRecordSerializer(serializers.ModelSerializer):
             "sample_id",
             "batch_no",
             "status",
+            "lab",
             "analyst",
             "analyst_username",
             "supervisor_comments",
@@ -41,6 +43,7 @@ class TestRecordSerializer(serializers.ModelSerializer):
             "updated_at",
             "product_name",
             "product_grade_name",
+             "lab_name", 
             "parameter_values",
             "results_input",
             "retest_record_id",

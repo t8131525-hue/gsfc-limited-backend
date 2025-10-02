@@ -10,11 +10,13 @@ from inventory.views import (
     VersionViewSet, # <-- Corrected: Renamed from SpecificationViewSet
     TestResultViewSet,
     InventoryStatsView,
+    LabViewSet, 
 )
 
 router = DefaultRouter()
 
 # Register the ViewSets with the router
+router.register(r'labs', LabViewSet, basename='lab') 
 router.register(r'products', ProductViewSet, basename='product')
 router.register(r'grades', ProductGradeViewSet, basename='productgrade')
 router.register(r'parameters', ParameterDefinitionViewSet, basename='parameterdefinition')
