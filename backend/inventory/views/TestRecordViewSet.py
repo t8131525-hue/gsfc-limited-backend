@@ -151,7 +151,14 @@ class TestRecordViewSet(viewsets.ModelViewSet):
         if not serializer.is_valid():
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-        analyst_to_assign = serializer.validated_data["analyst"]
+        analyst_id = serializer.validated_data["analyst_id"]
+        try:
+            analyst_to_assign = User.objects.get(pk=analyst_id)
+        except User.DoesNotExist:
+            return Response(
+                {"detail": "Selected analyst not found."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
 
         with transaction.atomic():
             original_test.status = "RETEST_ORDERED"
@@ -159,7 +166,8 @@ class TestRecordViewSet(viewsets.ModelViewSet):
 
             # Create the new TestRecord using the version, not the product
             new_test = TestRecord.objects.create(
-                version=original_test.version,  # <-- Corrected
+                version=original_test.version,
+                lab=original_test.lab,  # Also copy the lab from the original test
                 product_grade=original_test.product_grade,
                 batch_no=original_test.batch_no,
                 sample_id=original_test.sample_id,
