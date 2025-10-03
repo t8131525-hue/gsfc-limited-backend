@@ -38,7 +38,7 @@ class TestRecordViewSet(viewsets.ModelViewSet):
     filterset_class = TestRecordFilter
 
     search_fields = ["sample_id", "batch_no", "version__product__name", "record_id"]
-    ordering_fields = ["created_at", "analyst__username", "status"]
+    ordering_fields = ["created_at", "analyst__username", "status", "lab__name"]
     ordering = ["-created_at"]
 
     # ✅ THIS METHOD IS NOW SMARTER

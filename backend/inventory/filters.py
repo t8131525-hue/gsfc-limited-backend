@@ -20,5 +20,5 @@ class TestRecordFilter(django_filters.FilterSet):
         # --- ADD THE NEW FIELDS TO THE LIST ---
         fields = [
             'status', 'analyst', 'date_after', 'date_before', 
-            'analyst__isnull', 'retest_of__isnull'
+            'analyst__isnull', 'retest_of__isnull','lab',
         ]
