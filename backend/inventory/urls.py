@@ -11,6 +11,7 @@ from inventory.views import (
     TestResultViewSet,
     InventoryStatsView,
     LabViewSet, 
+     DailyStatsView,
 )
 
 router = DefaultRouter()
@@ -29,5 +30,6 @@ urlpatterns = router.urls
 
 # Add the custom stats endpoint
 urlpatterns += [
+    path("stats/daily-records/", DailyStatsView.as_view(), name="daily_record_stats"),
     path('stats/', InventoryStatsView.as_view(), name='inventory-stats'),
 ]
