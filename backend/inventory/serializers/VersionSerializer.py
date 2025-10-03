@@ -15,19 +15,14 @@ class VersionSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ('created_by', 'locked_at', 'activated_at', 'created_at')
 
-
     def validate(self, data):
-        # If updating, use the existing instance.
-        # If creating, create a new instance WITH the incoming data.
         instance = self.instance or Version(**data)
         
-        # If updating, we still need to apply the changes before cleaning.
         if self.instance:
             for attr, value in data.items():
                 setattr(instance, attr, value)
         
         try:
-            # This now runs on an instance that has a 'product' attribute.
             instance.clean()
         except DjangoValidationError as e:
             raise serializers.ValidationError(e.message_dict)
