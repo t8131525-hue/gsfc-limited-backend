@@ -2,6 +2,7 @@ from ..models import TestRecord, ParameterDefinition
 from django.core.exceptions import ValidationError
 from audit_trail.mixins import AuditableMixin
 from django.db import models
+from django.utils.translation import gettext_lazy as _
 
 
 class TestResult(AuditableMixin, models.Model):
@@ -29,12 +30,28 @@ class TestResult(AuditableMixin, models.Model):
         verbose_name = "Test Result"
         verbose_name_plural = "Test Results"
 
+    def __str__(self):
+        return f"Value for {self.parameter.name} in Test {self.test_record.id}"
+
     def clean(self):
         """
         Ensures that the correct value field is populated based on the
         parameter's data_type and that the value is valid.
         """
         super().clean()
+
+        # ---  IMMUTABILITY LOGIC ---
+        # If the record already exists and its parent TestRecord is in a locked state,
+        # prevent any changes to the result.
+        LOCKED_STATUSES = ["APPROVED", "REJECTED", "RETEST_ORDERED", "CLOSED"]
+        if self.pk and self.test_record.status in LOCKED_STATUSES:
+            raise ValidationError(
+                _(
+                    "Cannot change test results for a record that is already '%(status)s'."
+                )
+                % {"status": self.test_record.get_status_display()}
+            )
+        # ---  IMMUTABILITY LOGIC ---
 
         param_def = self.parameter
         has_decimal = self.value_decimal is not None
@@ -75,21 +92,6 @@ class TestResult(AuditableMixin, models.Model):
                     f"Valid options are: {', '.join(param_def.enum_options or [])}"
                 )
 
-        # # --- ADDED VALIDATION ---
-        # # Check if the decimal value is within the min/max range defined in the parameter.
-        # if has_decimal:
-        #     if param_def.min_value is not None and self.value_decimal < param_def.min_value:
-        #         raise ValidationError(
-        #             f"Value {self.value_decimal} is below the minimum allowed value of {param_def.min_value} for '{param_def.name}'."
-        #         )
-        #     if param_def.max_value is not None and self.value_decimal > param_def.max_value:
-        #         raise ValidationError(
-        #             f"Value {self.value_decimal} is above the maximum allowed value of {param_def.max_value} for '{param_def.name}'."
-        #         )
-
     def save(self, *args, **kwargs):
         self.full_clean()
         super().save(*args, **kwargs)
-
-    def __str__(self):
-        return f"Value for {self.parameter.name} in Test {self.test_record.id}"

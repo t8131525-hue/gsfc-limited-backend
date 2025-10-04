@@ -5,6 +5,14 @@ from .TestResultInputSerializer import TestResultInputSerializer
 from django.db import transaction
 
 
+class RelatedTestRecordSerializer(serializers.ModelSerializer):
+    """A lightweight serializer for related test records."""
+
+    class Meta:
+        model = TestRecord
+        fields = ["id", "record_id"]
+
+
 class TestRecordSerializer(serializers.ModelSerializer):
     parameter_values = TestResultDisplaySerializer(many=True, read_only=True)
     results_input = TestResultInputSerializer(
@@ -20,10 +28,10 @@ class TestRecordSerializer(serializers.ModelSerializer):
     )
     lab_name = serializers.CharField(source="lab.name", read_only=True)
     record_id = serializers.CharField(read_only=True)
-    retest_record_id = serializers.CharField(
-        source="retest_of.record_id", read_only=True
-    )
-    retests = serializers.SerializerMethodField()
+
+    retest_of = RelatedTestRecordSerializer(read_only=True)
+    retests = RelatedTestRecordSerializer(many=True, read_only=True)
+
     alert_ids = serializers.SerializerMethodField()
 
     class Meta:
@@ -56,7 +64,7 @@ class TestRecordSerializer(serializers.ModelSerializer):
             "lab_name",
             "parameter_values",
             "results_input",
-            "retest_record_id",
+            "retest_of",
             "retests",
             "alert_ids",
         ]
@@ -130,9 +138,9 @@ class TestRecordSerializer(serializers.ModelSerializer):
                 ).delete()
         return instance
 
-    def get_retests(self, obj):
-        # This will return a list of record_ids for easier frontend use.
-        return [r.record_id for r in obj.retests.all()]
+    # def get_retests(self, obj):
+    #     # This will return a list of record_ids for easier frontend use.
+    #     return [r.record_id for r in obj.retests.all()]
 
     def get_alert_ids(self, obj):
         # This will return a list of alert IDs, e.g., ["AL-20251004-01"]

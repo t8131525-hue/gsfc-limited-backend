@@ -253,10 +253,10 @@ class TestRecordViewSet(viewsets.ModelViewSet):
         with transaction.atomic():
             test_record = TestRecord.objects.select_for_update().get(pk=pk)
 
-            if test_record.status not in ["APPROVED", "REJECTED"]:
+            if test_record.status not in ["APPROVED", "REJECTED", "RETEST_ORDERED"]:
                 return Response(
                     {
-                        "detail": f"Cannot close a record with status '{test_record.status}'. Only 'APPROVED' or 'REJECTED' records can be closed."
+                        "detail": f"Cannot close a record with status '{test_record.get_status_display()}'."
                     },
                     status=status.HTTP_400_BAD_REQUEST,
                 )
