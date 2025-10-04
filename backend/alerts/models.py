@@ -1,6 +1,6 @@
 # alerts/models.py
 from django.db import models, transaction
-from inventory.models import TestRecord, TestResult
+from django.conf import settings
 
 
 class Alert(models.Model):
@@ -26,6 +26,22 @@ class Alert(models.Model):
     details = models.JSONField(
         help_text="Stores details like the value that triggered the alert and the expected range."
     )
+    acknowledged_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        related_name="acknowledged_alerts",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+    )
+    acknowledged_at = models.DateTimeField(null=True, blank=True)
+    resolved_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        related_name="resolved_alerts",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+    )
+    resolved_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

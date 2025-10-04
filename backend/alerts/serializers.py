@@ -38,6 +38,12 @@ class AlertContextSerializer(serializers.ModelSerializer):
     product_name = serializers.CharField(
         source="test_record.version.product.name", read_only=True
     )
+    acknowledged_by_full_name = serializers.CharField(
+        source="acknowledged_by.get_full_name", read_only=True
+    )
+    resolved_by_full_name = serializers.CharField(
+        source="resolved_by.get_full_name", read_only=True
+    )
 
     class Meta:
         model = Alert
@@ -49,4 +55,8 @@ class AlertContextSerializer(serializers.ModelSerializer):
             "created_at",
             "product_name",
             "test_record_data",
+            "acknowledged_at",
+            "acknowledged_by_full_name",
+            "resolved_at",
+            "resolved_by_full_name",
         ]

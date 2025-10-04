@@ -61,7 +61,7 @@ class TestRecordViewSet(viewsets.ModelViewSet):
             queryset = queryset.filter(analyst=user)
 
         # Automatic date filtering for the "Recent" view
-        if view_type == "recent":
+        if self.action == "list" and view_type == "recent":
             today = timezone.now().date()
             queryset = queryset.filter(created_at__date=today)
 
@@ -198,56 +198,48 @@ class TestRecordViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_403_FORBIDDEN,
             )
 
-        test_record = self.get_object()
-        new_status = request.data.get("status")
-        comments = request.data.get(
-            "supervisor_comments", test_record.supervisor_comments
-        )
+        # ✅ FIX: Wrap the entire logic in a transaction
+        with transaction.atomic():
+            # Re-fetch the object with a lock to prevent race conditions
+            test_record = TestRecord.objects.select_for_update().get(pk=pk)
 
-        if new_status not in ["APPROVED", "REJECTED"]:
-            return Response(
-                {
-                    "error": f"Invalid status '{new_status}'. This action only accepts 'APPROVED' or 'REJECTED'."
-                },
-                status=status.HTTP_400_BAD_REQUEST,
+            # Check if the record is still pending
+            if test_record.status != "PENDING":
+                return Response(
+                    {
+                        "detail": "This record has already been actioned by another user."
+                    },
+                    status=status.HTTP_409_CONFLICT,
+                )
+
+            new_status = request.data.get("status")
+            comments = request.data.get(
+                "supervisor_comments", test_record.supervisor_comments
             )
 
-        if test_record.status == new_status:
-            return Response(
-                {"detail": f"Test record is already {new_status}."},
-                status=status.HTTP_400_BAD_REQUEST,
+            if new_status not in ["APPROVED", "REJECTED"]:
+                return Response(
+                    {"error": f"Invalid status '{new_status}'."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            # This part is now safe because of the transaction and lock
+            test_record.status = new_status
+            test_record.supervisor_comments = comments
+            test_record.approved_by = user
+            test_record.approved_at = timezone.now()
+            test_record.save()
+
+            log_custom_event(
+                instance=test_record,
+                action_type=new_status,
+                details=f"Record status changed to {new_status} by {user.username}.",
+                user=user,
             )
-
-        old_status = test_record.status
-        old_approval_user = (
-            str(test_record.approved_by) if test_record.approved_by else ""
-        )
-        old_comments = (
-            test_record.supervisor_comments if test_record.supervisor_comments else ""
-        )
-
-        test_record.status = new_status
-        test_record.supervisor_comments = comments
-        test_record.approved_by = user
-        test_record.approved_at = timezone.now()
-        test_record.save()
-
-        details = {
-            "status": [old_status, new_status],
-            "supervisor_comments": [
-                old_comments,
-                comments if comments is not None else "",
-            ],
-            "approved_by": [old_approval_user, str(user)],
-        }
-        log_custom_event(
-            instance=test_record, action_type=new_status, details=details, user=user
-        )
 
         serializer = self.get_serializer(test_record)
         return Response(serializer.data)
 
-    # ✅ NEW ACTION: Add this entire method to your TestRecordViewSet class
     @action(
         detail=True, methods=["post"], permission_classes=[permissions.IsAuthenticated]
     )
@@ -262,26 +254,28 @@ class TestRecordViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_403_FORBIDDEN,
             )
 
-        test_record = self.get_object()
+        # ✅ FIX: Wrap the logic in a transaction for safety
+        with transaction.atomic():
+            test_record = TestRecord.objects.select_for_update().get(pk=pk)
 
-        if test_record.status not in ["APPROVED", "REJECTED"]:
-            return Response(
-                {
-                    "detail": f"Cannot close a record with status '{test_record.status}'. Only 'APPROVED' or 'REJECTED' records can be closed."
-                },
-                status=status.HTTP_400_BAD_REQUEST,
+            if test_record.status not in ["APPROVED", "REJECTED"]:
+                return Response(
+                    {
+                        "detail": f"Cannot close a record with status '{test_record.status}'. Only 'APPROVED' or 'REJECTED' records can be closed."
+                    },
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            old_status = test_record.status
+            test_record.status = "CLOSED"
+            test_record.save()
+
+            log_custom_event(
+                instance=test_record,
+                action_type="CLOSED",
+                user=user,
+                details=f"Record status changed from {old_status} to CLOSED by {user.username}.",
             )
-
-        old_status = test_record.status
-        test_record.status = "CLOSED"
-        test_record.save()
-
-        log_custom_event(
-            instance=test_record,
-            action_type="CLOSED",
-            user=user,
-            details=f"Record status changed from {old_status} to CLOSED by {user.username}.",
-        )
 
         serializer = self.get_serializer(test_record)
         return Response(serializer.data, status=status.HTTP_200_OK)
