@@ -232,9 +232,9 @@ class TestRecord(AuditableMixin, models.Model):
 
     def save(self, *args, **kwargs):
         # Store the status before any changes, but only if the object exists in DB
-        original_status = None
-        if self.pk:
-            original_status = TestRecord.objects.get(pk=self.pk).status
+        # original_status = None
+        # if self.pk:
+        #     original_status = TestRecord.objects.get(pk=self.pk).status
 
         # Set timestamps for status changes
         if self.status in ["APPROVED", "REJECTED"] and not self.approved_at:
@@ -253,11 +253,11 @@ class TestRecord(AuditableMixin, models.Model):
             super().save(*args, **kwargs)
 
             # --- Side Effect: Create retest record AFTER saving the status change ---
-            if (
-                original_status not in ["RETEST_ORDERED"]
-                and self.status == "RETEST_ORDERED"
-            ):
-                self._create_retest()
+            # if (
+            #     original_status not in ["RETEST_ORDERED"]
+            #     and self.status == "RETEST_ORDERED"
+            # ):
+            #     self._create_retest()
 
             # --- Auto-generate record_id (your existing logic is good) ---
             if is_new and not self.record_id:

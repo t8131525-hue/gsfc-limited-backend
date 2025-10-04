@@ -105,7 +105,11 @@ class TestRecordSerializer(serializers.ModelSerializer):
         return full_name if full_name else user.username
 
     def get_analyst_full_name(self, obj):
-        return self.get_user_display_name(obj.analyst)
+        if obj.analyst:
+            return self.get_user_display_name(obj.analyst)
+        if obj.retest_of and obj.retest_of.retest_ordered_by:
+            return self.get_user_display_name(obj.retest_of.retest_ordered_by)
+        return None
 
     def get_approved_by_full_name(self, obj):
         return self.get_user_display_name(obj.approved_by)
