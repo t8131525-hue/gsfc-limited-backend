@@ -22,6 +22,7 @@ class TestRecordSerializer(serializers.ModelSerializer):
         source="retest_of.record_id", read_only=True
     )
     retests = serializers.SerializerMethodField()
+    alert_ids = serializers.SerializerMethodField()
 
     class Meta:
         model = TestRecord
@@ -49,6 +50,7 @@ class TestRecordSerializer(serializers.ModelSerializer):
             "results_input",
             "retest_record_id",
             "retests",
+            "alert_ids",
         ]
         read_only_fields = (
             "analyst",
@@ -117,3 +119,7 @@ class TestRecordSerializer(serializers.ModelSerializer):
     def get_retests(self, obj):
         # This will return a list of record_ids for easier frontend use.
         return [r.record_id for r in obj.retests.all()]
+
+    def get_alert_ids(self, obj):
+        # This will return a list of alert IDs, e.g., ["AL-20251004-01"]
+        return [alert.alert_id for alert in obj.alerts.all() if alert.alert_id]
