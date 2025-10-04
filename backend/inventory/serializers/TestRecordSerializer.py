@@ -4,14 +4,14 @@ from .TestResultDisplaySerializer import TestResultDisplaySerializer
 from .TestResultInputSerializer import TestResultInputSerializer
 from django.db import transaction
 
+
 class TestRecordSerializer(serializers.ModelSerializer):
     parameter_values = TestResultDisplaySerializer(many=True, read_only=True)
     results_input = TestResultInputSerializer(
         many=True, write_only=True, source="parameter_values"
     )
-    analyst_username = serializers.CharField(source="analyst.username", read_only=True)
-    
-    # Corrected source to get product name via the version
+    analyst_full_name = serializers.SerializerMethodField()
+    approved_by_full_name = serializers.SerializerMethodField()
     product_name = serializers.CharField(source="version.product.name", read_only=True)
     product_grade_name = serializers.CharField(
         source="product_grade.name", read_only=True, allow_null=True
@@ -28,22 +28,23 @@ class TestRecordSerializer(serializers.ModelSerializer):
         fields = [
             "id",
             "record_id",
-            "version",  # <-- Corrected from 'product'
+            "version",
             "product_grade",
             "sample_id",
             "batch_no",
             "status",
             "lab",
             "analyst",
-            "analyst_username",
+            "analyst_full_name",
             "supervisor_comments",
             "approved_by",
+            "approved_by_full_name",
             "approved_at",
             "created_at",
             "updated_at",
             "product_name",
             "product_grade_name",
-             "lab_name", 
+            "lab_name",
             "parameter_values",
             "results_input",
             "retest_record_id",
@@ -55,17 +56,30 @@ class TestRecordSerializer(serializers.ModelSerializer):
             "approved_at",
             "retest_of",
         )
-    
+
     def validate_version(self, value):
         """
         Check that the version is active.
         """
         if not value.is_active:
-            raise serializers.ValidationError("Can only create test records for an active version.")
+            raise serializers.ValidationError(
+                "Can only create test records for an active version."
+            )
         return value
 
-    # Your create and update methods are excellent and don't need changes,
-    # but I've included them here for completeness.
+    def get_user_display_name(self, user):
+        """Helper to get full name, falling back to username."""
+        if not user:
+            return None
+        full_name = user.get_full_name()
+        return full_name if full_name else user.username
+
+    def get_analyst_full_name(self, obj):
+        return self.get_user_display_name(obj.analyst)
+
+    def get_approved_by_full_name(self, obj):
+        return self.get_user_display_name(obj.approved_by)
+
     @transaction.atomic
     def create(self, validated_data):
         parameter_values_data = validated_data.pop("parameter_values")
@@ -80,7 +94,6 @@ class TestRecordSerializer(serializers.ModelSerializer):
         parameter_values_data = validated_data.pop("parameter_values", None)
         instance = super().update(instance, validated_data)
         if parameter_values_data is not None:
-            # This is a robust way to handle nested updates. Great job here.
             existing_results = {
                 result.parameter.id: result
                 for result in instance.parameter_values.all()
