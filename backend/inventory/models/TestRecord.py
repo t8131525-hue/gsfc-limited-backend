@@ -4,6 +4,7 @@ from django.core.exceptions import ValidationError
 from ..models import Lab, Product, ProductGrade
 from django.utils.translation import gettext_lazy as _
 from django.contrib.auth import get_user_model
+from django.conf import settings
 
 User = get_user_model()
 
@@ -55,7 +56,7 @@ class TestRecord(AuditableMixin, models.Model):
     ]
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="PENDING")
 
-    # User and approval tracking
+    # User, approval tracking and Time stamps 
     analyst = models.ForeignKey(
         User,
         on_delete=models.SET_NULL,
@@ -72,13 +73,25 @@ class TestRecord(AuditableMixin, models.Model):
         related_name="approved_tests",
     )
     approved_at = models.DateTimeField(blank=True, null=True)
-
-    # Retest tracking
+    closed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="closed_tests",
+    )
+    closed_at = models.DateTimeField(blank=True, null=True)
     retest_of = models.ForeignKey(
         "self", on_delete=models.SET_NULL, null=True, blank=True, related_name="retests"
     )
-
-    # Timestamps
+    retest_ordered_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="ordered_retests"
+    )
+    retest_ordered_at = models.DateTimeField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

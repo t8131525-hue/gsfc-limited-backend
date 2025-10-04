@@ -33,15 +33,11 @@ class TestRecordViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
     pagination_class = StandardResultsSetPagination
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
-
-    # ✅ USE THE CUSTOM FILTER CLASS
     filterset_class = TestRecordFilter
-
     search_fields = ["sample_id", "batch_no", "version__product__name", "record_id"]
     ordering_fields = ["created_at", "analyst__username", "status", "lab__name"]
     ordering = ["-created_at"]
 
-    # ✅ THIS METHOD IS NOW SMARTER
     def get_queryset(self):
         """
         Dynamically filters the queryset.
@@ -67,7 +63,6 @@ class TestRecordViewSet(viewsets.ModelViewSet):
 
         return queryset
 
-    # ✅ ADD THIS METHOD TO CHOOSE THE SERIALIZER DYNAMICALLY
     def get_serializer_class(self):
         """
         Chooses the serializer based on the action and view type.
@@ -80,7 +75,6 @@ class TestRecordViewSet(viewsets.ModelViewSet):
                 return HistoricalTestRecordSerializer
             return RecentTestRecordSerializer
 
-        # For 'retrieve', 'create', 'update', 'partial_update', etc.
         return TestRecordSerializer
 
     @action(
@@ -138,36 +132,40 @@ class TestRecordViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_403_FORBIDDEN,
             )
 
-        original_test = self.get_object()
-        if original_test.status not in ["APPROVED", "REJECTED"]:
-            return Response(
-                {
-                    "detail": "Can only order a retest for a record that is 'APPROVED' or 'REJECTED'."
-                },
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
-        serializer = AssignAnalystSerializer(data=request.data)
-        if not serializer.is_valid():
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-        analyst_id = serializer.validated_data["analyst_id"]
-        try:
-            analyst_to_assign = User.objects.get(pk=analyst_id)
-        except User.DoesNotExist:
-            return Response(
-                {"detail": "Selected analyst not found."},
-                status=status.HTTP_404_NOT_FOUND,
-            )
-
         with transaction.atomic():
-            original_test.status = "RETEST_ORDERED"
-            original_test.save()
+            # Lock the original test to prevent simultaneous actions
+            original_test = self.get_object()
+            if original_test.status not in ["APPROVED", "REJECTED"]:
+                return Response(
+                    {
+                        "detail": "Can only order a retest for a record that is 'APPROVED' or 'REJECTED'."
+                    },
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
 
-            # Create the new TestRecord using the version, not the product
+            serializer = AssignAnalystSerializer(data=request.data)
+            if not serializer.is_valid():
+                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+            analyst_id = serializer.validated_data["analyst_id"]
+            try:
+                analyst_to_assign = User.objects.get(pk=analyst_id)
+            except User.DoesNotExist:
+                return Response(
+                    {"detail": "Selected analyst not found."},
+                    status=status.HTTP_404_NOT_FOUND,
+                )
+
+            original_test.status = "RETEST_ORDERED"
+            original_test.retest_ordered_by = user
+            original_test.retest_ordered_at = timezone.now()
+            original_test.save(
+                update_fields=["status", "retest_ordered_by", "retest_ordered_at"]
+            )
+
             new_test = TestRecord.objects.create(
                 version=original_test.version,
-                lab=original_test.lab,  # Also copy the lab from the original test
+                lab=original_test.lab,
                 product_grade=original_test.product_grade,
                 batch_no=original_test.batch_no,
                 sample_id=original_test.sample_id,
@@ -184,6 +182,7 @@ class TestRecordViewSet(viewsets.ModelViewSet):
         response_serializer = self.get_serializer(new_test)
         return Response(response_serializer.data, status=status.HTTP_201_CREATED)
 
+    # Approve/Reject
     @action(
         detail=True, methods=["patch"], permission_classes=[permissions.IsAuthenticated]
     )
@@ -198,12 +197,9 @@ class TestRecordViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_403_FORBIDDEN,
             )
 
-        # ✅ FIX: Wrap the entire logic in a transaction
         with transaction.atomic():
-            # Re-fetch the object with a lock to prevent race conditions
             test_record = TestRecord.objects.select_for_update().get(pk=pk)
 
-            # Check if the record is still pending
             if test_record.status != "PENDING":
                 return Response(
                     {
@@ -223,7 +219,6 @@ class TestRecordViewSet(viewsets.ModelViewSet):
                     status=status.HTTP_400_BAD_REQUEST,
                 )
 
-            # This part is now safe because of the transaction and lock
             test_record.status = new_status
             test_record.supervisor_comments = comments
             test_record.approved_by = user
@@ -240,6 +235,7 @@ class TestRecordViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(test_record)
         return Response(serializer.data)
 
+    # Close the record
     @action(
         detail=True, methods=["post"], permission_classes=[permissions.IsAuthenticated]
     )
@@ -254,7 +250,6 @@ class TestRecordViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_403_FORBIDDEN,
             )
 
-        # ✅ FIX: Wrap the logic in a transaction for safety
         with transaction.atomic():
             test_record = TestRecord.objects.select_for_update().get(pk=pk)
 
@@ -268,7 +263,9 @@ class TestRecordViewSet(viewsets.ModelViewSet):
 
             old_status = test_record.status
             test_record.status = "CLOSED"
-            test_record.save()
+            test_record.closed_by = request.user
+            test_record.closed_at = timezone.now()
+            test_record.save(update_fields=["status", "closed_by", "closed_at"])
 
             log_custom_event(
                 instance=test_record,

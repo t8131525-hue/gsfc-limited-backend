@@ -12,6 +12,8 @@ class TestRecordSerializer(serializers.ModelSerializer):
     )
     analyst_full_name = serializers.SerializerMethodField()
     approved_by_full_name = serializers.SerializerMethodField()
+    closed_by_full_name = serializers.SerializerMethodField()
+    retest_ordered_by_full_name = serializers.SerializerMethodField()
     product_name = serializers.CharField(source="version.product.name", read_only=True)
     product_grade_name = serializers.CharField(
         source="product_grade.name", read_only=True, allow_null=True
@@ -41,7 +43,13 @@ class TestRecordSerializer(serializers.ModelSerializer):
             "approved_by",
             "approved_by_full_name",
             "approved_at",
+            "closed_by",
+            "closed_at",
+            "closed_by_full_name",
             "created_at",
+            "retest_ordered_by",
+            "retest_ordered_at",
+            "retest_ordered_by_full_name",
             "updated_at",
             "product_name",
             "product_grade_name",
@@ -81,6 +89,12 @@ class TestRecordSerializer(serializers.ModelSerializer):
 
     def get_approved_by_full_name(self, obj):
         return self.get_user_display_name(obj.approved_by)
+
+    def get_closed_by_full_name(self, obj):
+        return self.get_user_display_name(obj.closed_by)
+
+    def get_retest_ordered_by_full_name(self, obj):
+        return self.get_user_display_name(obj.retest_ordered_by)
 
     @transaction.atomic
     def create(self, validated_data):
