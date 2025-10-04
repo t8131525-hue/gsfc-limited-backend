@@ -1,5 +1,6 @@
 from rest_framework import serializers
 from ..models import TestRecord, TestResult, Version
+from alerts.models import Alert
 from .TestResultDisplaySerializer import TestResultDisplaySerializer
 from .TestResultInputSerializer import TestResultInputSerializer
 from django.db import transaction
@@ -11,6 +12,12 @@ class RelatedTestRecordSerializer(serializers.ModelSerializer):
     class Meta:
         model = TestRecord
         fields = ["id", "record_id"]
+
+
+class RelatedAlertSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Alert
+        fields = ["id", "alert_id"]
 
 
 class TestRecordSerializer(serializers.ModelSerializer):
@@ -31,8 +38,8 @@ class TestRecordSerializer(serializers.ModelSerializer):
 
     retest_of = RelatedTestRecordSerializer(read_only=True)
     retests = RelatedTestRecordSerializer(many=True, read_only=True)
-
-    alert_ids = serializers.SerializerMethodField()
+    alerts = RelatedAlertSerializer(many=True, read_only=True)
+    # alert_ids = serializers.SerializerMethodField()
 
     class Meta:
         model = TestRecord
@@ -66,7 +73,8 @@ class TestRecordSerializer(serializers.ModelSerializer):
             "results_input",
             "retest_of",
             "retests",
-            "alert_ids",
+            # "alert_ids",
+            "alerts",
         ]
         read_only_fields = (
             "analyst",
@@ -142,6 +150,6 @@ class TestRecordSerializer(serializers.ModelSerializer):
     #     # This will return a list of record_ids for easier frontend use.
     #     return [r.record_id for r in obj.retests.all()]
 
-    def get_alert_ids(self, obj):
-        # This will return a list of alert IDs, e.g., ["AL-20251004-01"]
-        return [alert.alert_id for alert in obj.alerts.all() if alert.alert_id]
+    # def get_alert_ids(self, obj):
+    #     # This will return a list of alert IDs, e.g., ["AL-20251004-01"]
+    #     return [alert.alert_id for alert in obj.alerts.all() if alert.alert_id]
