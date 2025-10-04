@@ -1,14 +1,12 @@
 # alerts/serializers.py
 from rest_framework import serializers
 from .models import Alert
-# --- THIS IS THE KEY CHANGE ---
-# Import the new serializer from the inventory app
 from inventory.serializers import TestRecordForAlertContextSerializer
 
 class AlertSerializer(serializers.ModelSerializer):
     """This serializer is for the main list view of alerts."""
     sample_id = serializers.CharField(source='test_record.sample_id', read_only=True)
-    product_name = serializers.CharField(source='test_record.product.name', read_only=True)
+    product_name = serializers.CharField(source='test_record.version.product.name', read_only=True)
 
     class Meta:
         model = Alert
@@ -22,7 +20,6 @@ class AlertSerializer(serializers.ModelSerializer):
             'test_record'
         ]
 
-# --- NEW CONTEXT SERIALIZER USING THE IMPORT ---
 class AlertContextSerializer(serializers.ModelSerializer):
     """
     This serializer powers the detail page. It nests the full test record

@@ -15,8 +15,10 @@ class AlertViewSet(viewsets.ModelViewSet):
     - PATCH: /api/alerts/{id}/update_status/
     """
     queryset = Alert.objects.select_related(
-        'test_record__product', 
-        'test_record__product_grade'
+        'test_record__version__product', 
+        'test_record__product_grade',
+        'test_record__analyst',
+        'test_record__lab',
     ).all().order_by('-created_at') 
     
     serializer_class = AlertSerializer
