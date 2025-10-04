@@ -197,10 +197,11 @@ class TestRecord(AuditableMixin, models.Model):
 
             # Rule: Enforce state transitions
             # PENDING can only go to APPROVED or REJECTED
-            if original_status == "PENDING" and self.status not in [
-                "APPROVED",
-                "REJECTED",
-            ]:
+            if (
+                original_status == "PENDING"
+                and self.status != original_status
+                and self.status not in ["APPROVED", "REJECTED"]
+            ):
                 raise ValidationError(
                     _(
                         "A 'Pending' record can only be moved to 'Approved' or 'Rejected'."

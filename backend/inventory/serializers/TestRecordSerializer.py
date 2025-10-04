@@ -29,12 +29,15 @@ class TestRecordSerializer(serializers.ModelSerializer):
     approved_by_full_name = serializers.SerializerMethodField()
     closed_by_full_name = serializers.SerializerMethodField()
     retest_ordered_by_full_name = serializers.SerializerMethodField()
+    product_id = serializers.IntegerField(source="version.product.id", read_only=True)
+
     product_name = serializers.CharField(source="version.product.name", read_only=True)
     product_grade_name = serializers.CharField(
         source="product_grade.name", read_only=True, allow_null=True
     )
     lab_name = serializers.CharField(source="lab.name", read_only=True)
     record_id = serializers.CharField(read_only=True)
+    version_name = serializers.CharField(source="version.version_name", read_only=True)
 
     retest_of = RelatedTestRecordSerializer(read_only=True)
     retests = RelatedTestRecordSerializer(many=True, read_only=True)
@@ -47,6 +50,7 @@ class TestRecordSerializer(serializers.ModelSerializer):
             "id",
             "record_id",
             "version",
+            "version_name",
             "product_grade",
             "sample_id",
             "batch_no",
@@ -66,6 +70,7 @@ class TestRecordSerializer(serializers.ModelSerializer):
             "retest_ordered_at",
             "retest_ordered_by_full_name",
             "updated_at",
+            "product_id",
             "product_name",
             "product_grade_name",
             "lab_name",
@@ -73,7 +78,6 @@ class TestRecordSerializer(serializers.ModelSerializer):
             "results_input",
             "retest_of",
             "retests",
-            # "alert_ids",
             "alerts",
         ]
         read_only_fields = (
@@ -145,11 +149,3 @@ class TestRecordSerializer(serializers.ModelSerializer):
                     id__in=[res.id for res in existing_results.values()]
                 ).delete()
         return instance
-
-    # def get_retests(self, obj):
-    #     # This will return a list of record_ids for easier frontend use.
-    #     return [r.record_id for r in obj.retests.all()]
-
-    # def get_alert_ids(self, obj):
-    #     # This will return a list of alert IDs, e.g., ["AL-20251004-01"]
-    #     return [alert.alert_id for alert in obj.alerts.all() if alert.alert_id]
