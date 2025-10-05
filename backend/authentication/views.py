@@ -9,6 +9,7 @@ from .serializers import UserDetailSerializer, CustomTokenObtainPairSerializer
 from audit_trail.utils import log_custom_event
 from rest_framework_simplejwt.exceptions import TokenError
 import logging
+from rest_framework.filters import SearchFilter
 
 User = get_user_model()
 
@@ -110,13 +111,13 @@ class UserListView(generics.ListAPIView):
     """
 
     serializer_class = UserDetailSerializer
-    # Use the new permission class
     permission_classes = [permissions.IsAuthenticated, HasRequiredPermission]
-    # Specify the single required permission codename (app_label.codename)
     required_permission = "authentication.view_user_list"
+    filter_backends = [SearchFilter]
+    search_fields = ["username", "first_name", "last_name", "email"]
 
     def get_queryset(self):
         """
         This view should now return users who are in the 'Analyst' group.
         """
-        return User.objects.all().order_by("username")
+        return User.objects.filter(is_superuser=False).order_by("username")
