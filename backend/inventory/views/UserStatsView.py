@@ -6,8 +6,8 @@ from rest_framework import permissions, status
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 from datetime import timedelta
-from django.db.models import Count
-from django.db.models.functions import TruncDay, TruncWeek, TruncMonth, TruncYear
+from django.db.models import Count, DateField
+from django.db.models.functions import TruncDay, TruncWeek, TruncMonth, TruncYear, Cast
 
 from ..models import TestRecord
 from ..serializers import UserPerformanceSerializer, UserSummaryCountsSerializer
@@ -50,7 +50,12 @@ class UserPerformanceChartView(APIView):
         }.get(group_by, TruncWeek)
 
         chart_data = (
-            queryset.annotate(date=trunc_field('created_at'))
+            queryset.annotate(
+                truncated_date=trunc_field('created_at')
+            )
+            .annotate(
+                date=Cast('truncated_date', output_field=DateField())
+            )
             .values('date')
             .annotate(count=Count('id'))
             .order_by('date')

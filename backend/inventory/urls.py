@@ -36,12 +36,14 @@ urlpatterns += [
     path("stats/daily-records/", DailyStatsView.as_view(), name="daily_record_stats"),
     path("stats/", InventoryStatsView.as_view(), name="inventory-stats"),
      path(
-        "stats/user/<int:user_id>/performance-chart/",
+        "stats/users/<int:user_id>/performance-chart/",
         UserPerformanceChartView.as_view(),
         name="user_performance_chart",
     ),
+    
+    # ✅ FIX: Change 'user' to 'users' here as well
     path(
-        "stats/user/<int:user_id>/summary-counts/",
+        "stats/users/<int:user_id>/summary-counts/",
         UserSummaryCountsView.as_view(),
         name="user_summary_counts",
     ),
