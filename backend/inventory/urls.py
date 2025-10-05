@@ -12,6 +12,8 @@ from inventory.views import (
     InventoryStatsView,
     LabViewSet,
     DailyStatsView,
+    UserPerformanceChartView, 
+    UserSummaryCountsView,
 )
 
 router = DefaultRouter()
@@ -33,4 +35,14 @@ urlpatterns = router.urls
 urlpatterns += [
     path("stats/daily-records/", DailyStatsView.as_view(), name="daily_record_stats"),
     path("stats/", InventoryStatsView.as_view(), name="inventory-stats"),
+     path(
+        "stats/user/<int:user_id>/performance-chart/",
+        UserPerformanceChartView.as_view(),
+        name="user_performance_chart",
+    ),
+    path(
+        "stats/user/<int:user_id>/summary-counts/",
+        UserSummaryCountsView.as_view(),
+        name="user_summary_counts",
+    ),
 ]
