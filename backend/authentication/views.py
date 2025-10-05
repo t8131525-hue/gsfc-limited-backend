@@ -119,4 +119,4 @@ class UserListView(generics.ListAPIView):
         """
         This view should now return users who are in the 'Analyst' group.
         """
-        return User.objects.filter(groups__name="Analyst").order_by("username")
+        return User.objects.all().order_by("username")
