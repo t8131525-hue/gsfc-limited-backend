@@ -1,6 +1,6 @@
 # authentication/views.py
 from django.contrib.auth import get_user_model
-from rest_framework import generics, permissions, status
+from rest_framework import generics, permissions, status, viewsets
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -104,20 +104,28 @@ class LogoutView(APIView):
             )
 
 
-class UserListView(generics.ListAPIView):
+class UserViewSet(viewsets.ReadOnlyModelViewSet):
     """
-    A view that returns a list of all 'analyst' users.
-    Only accessible by users with the 'view_analyst_list' permission.
+    A ViewSet for listing and retrieving user instances.
+    - `list`: Returns a paginated list of all non-superuser users.
+            Requires 'authentication.view_user_list' permission.
+    - `retrieve`: Returns a single user's details.
+                  Requires the user to be authenticated.
     """
-
     serializer_class = UserDetailSerializer
-    permission_classes = [permissions.IsAuthenticated, HasRequiredPermission]
-    required_permission = "authentication.view_user_list"
+    queryset = User.objects.filter(is_superuser=False).order_by("username")
     filter_backends = [SearchFilter]
-    search_fields = ["username", "first_name", "last_name", "email"]
+    search_fields = ['username', 'first_name', 'last_name', 'email']
 
-    def get_queryset(self):
+    def get_permissions(self):
         """
-        This view should now return users who are in the 'Analyst' group.
+        Instantiates and returns the list of permissions that this view requires.
         """
-        return User.objects.filter(is_superuser=False).order_by("username")
+        if self.action == 'list':
+            # Only the list view requires the special permission
+            self.permission_classes = [permissions.IsAuthenticated, HasRequiredPermission]
+            self.required_permission = "authentication.view_user_list"
+        else:
+            # All other actions (like retrieve) just require authentication
+            self.permission_classes = [permissions.IsAuthenticated]
+        return super().get_permissions()
