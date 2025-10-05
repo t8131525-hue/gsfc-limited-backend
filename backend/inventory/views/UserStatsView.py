@@ -26,7 +26,7 @@ class UserPerformanceChartView(APIView):
                 {"detail": "User not found."}, status=status.HTTP_404_NOT_FOUND
             )
 
-        # 1. DETERMINE THE DATE RANGE
+        # ✅ 1. SIMPLIFIED DATE LOGIC: Use frontend dates if available, otherwise default to 7 days.
         try:
             date_after_str = request.query_params.get("date_after")
             date_before_str = request.query_params.get("date_before")
@@ -47,53 +47,13 @@ class UserPerformanceChartView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        # ✅ 2. AUTOMATICALLY DETERMINE THE BEST 'group_by' LEVEL
+        # We will now always group by day and let the frontend decide the range.
+        # The zero-filling logic is perfect for this.
         duration = end_date - start_date
-        group_by = request.query_params.get("group_by", "day")
-
-        # ✅ FIX: CALCULATE THE DATE RANGE BASED ON THE 'group_by' PARAMETER
-        end_date = timezone.now().date()
-        if group_by == "day":  # Corresponds to "Last 7 Days"
-            start_date = end_date - timedelta(days=6)
-        elif group_by == "week":  # Corresponds to "Last 30 Days" and "Last 3 Months"
-            # Determine if it's 30 or 90 days based on frontend logic
-            # For simplicity, we can default to 30 for now, but a more robust
-            # solution would be for the frontend to send the date range.
-            # Let's assume the frontend will send date_after/date_before for custom ranges.
-            # This logic is for the predefined dropdowns.
-            if request.query_params.get("range") == "3_months":  # Hypothetical param
-                start_date = end_date - timedelta(days=89)
-            else:  # Default for 'week' grouping is 30 days
-                start_date = end_date - timedelta(days=29)
-        elif group_by == "month":  # Corresponds to "Last 6 Months" and "Last Year"
-            if request.query_params.get("range") == "year":  # Hypothetical param
-                start_date = end_date - timedelta(days=364)
-            else:  # Default for 'month' grouping is 6 months
-                start_date = end_date - timedelta(days=179)
-        else:  # Default case
-            start_date = end_date - timedelta(days=6)
-
-        # Override with custom date range if provided
-        date_after_str = request.query_params.get("date_after")
-        date_before_str = request.query_params.get("date_before")
-        if date_after_str and date_before_str:
-            try:
-                start_date = date.fromisoformat(date_after_str)
-                end_date = date.fromisoformat(date_before_str)
-            except (ValueError, TypeError):
-                return Response(
-                    {"detail": "Invalid date format. Use YYYY-MM-DD."},
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
-
-        # ✅ REMOVED: The old logic that was causing the 400 Bad Request error.
-        # Now the view handles all group_by types.
-
-        trunc_function = {
-            "day": TruncDay,
-            "week": TruncWeek,
-            "month": TruncMonth,
-        }.get(group_by, TruncDay)
+        all_dates = {
+            (start_date + timedelta(days=i)).isoformat(): 0
+            for i in range(duration.days + 1)
+        }
 
         db_counts = (
             TestRecord.objects.filter(
@@ -101,30 +61,20 @@ class UserPerformanceChartView(APIView):
                 created_at__date__gte=start_date,
                 created_at__date__lte=end_date,
             )
-            .annotate(date=Cast(trunc_function("created_at"), output_field=DateField()))
+            .annotate(date=Cast(TruncDay("created_at"), output_field=DateField()))
             .values("date")
             .annotate(count=Count("id"))
             .order_by("date")
         )
 
-        # Zero-filling for daily grouping is still a good idea
-        if group_by == "day":
-            duration = end_date - start_date
-            all_dates = {
-                (start_date + timedelta(days=i)).isoformat(): 0
-                for i in range(duration.days + 1)
-            }
-            for item in db_counts:
-                date_str = item["date"].isoformat()
-                if date_str in all_dates:
-                    all_dates[date_str] = item["count"]
+        for item in db_counts:
+            date_str = item["date"].isoformat()
+            if date_str in all_dates:
+                all_dates[date_str] = item["count"]
 
-            chart_data = [
-                {"date": date_str, "count": count}
-                for date_str, count in all_dates.items()
-            ]
-        else:
-            chart_data = list(db_counts)
+        chart_data = [
+            {"date": date_str, "count": count} for date_str, count in all_dates.items()
+        ]
 
         serializer = UserPerformanceSerializer(chart_data, many=True)
         return Response(serializer.data)

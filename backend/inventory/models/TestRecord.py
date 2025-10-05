@@ -165,7 +165,7 @@ class TestRecord(AuditableMixin, models.Model):
 
         # 2. Logic for existing records (updates)
         if self.pk:
-            original = TestRecord.objects.get(pk=self.pk)
+            original = TestRecord.objects.select_for_update().get(pk=self.pk)
             original_status = original.status
 
             # Rule: Cannot modify a CLOSED record at all.
