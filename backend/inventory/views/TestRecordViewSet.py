@@ -34,7 +34,15 @@ class TestRecordViewSet(viewsets.ModelViewSet):
     pagination_class = StandardResultsSetPagination
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     filterset_class = TestRecordFilter
-    search_fields = ["sample_id", "batch_no", "version__product__name", "record_id"]
+    search_fields = [
+        "sample_id", 
+        "batch_no", 
+        "version__product__name", 
+        "record_id",
+        "analyst__username",
+        "analyst__first_name",
+        "analyst__last_name",
+    ]
     ordering_fields = ["created_at", "analyst__username", "status", "lab__name"]
     ordering = ["-created_at"]
 
