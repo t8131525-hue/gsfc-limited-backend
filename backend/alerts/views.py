@@ -8,6 +8,8 @@ from .serializers import AlertSerializer, AlertContextSerializer
 from product_testing_system.pagination import StandardResultsSetPagination
 from django.utils import timezone
 from django.db import transaction
+from .filters import AlertFilter # ✅ 1. Import the new filter
+from rest_framework.filters import SearchFilter #
 
 
 # --- UPDATED: No longer a ReadOnlyModelViewSet ---
@@ -41,6 +43,16 @@ class AlertViewSet(viewsets.ModelViewSet):
         "status": ["exact", "in"],
         "test_record": ["exact"],
     }
+    filter_backends = [DjangoFilterBackend, SearchFilter]
+    filterset_class = AlertFilter
+    
+    # ✅ 4. Define the fields to search against
+    search_fields = [
+        'alert_id', 
+        'test_record__sample_id', 
+        'test_record__version__product__name',
+        'details__parameter_name'
+    ]
 
     # --- Make the ViewSet mostly read-only except for our custom action ---
     http_method_names = ["get", "head", "options", "patch"]
