@@ -21,3 +21,4 @@ if __name__ == "__main__":
     project_root = os.getcwd()
     print(f"Scanning for __pycache__ folders in: {project_root}")
     delete_pycache_dirs(project_root)
+    
