@@ -231,11 +231,6 @@ class TestRecord(AuditableMixin, models.Model):
                 )
 
     def save(self, *args, **kwargs):
-        # Store the status before any changes, but only if the object exists in DB
-        # original_status = None
-        # if self.pk:
-        #     original_status = TestRecord.objects.get(pk=self.pk).status
-
         # Set timestamps for status changes
         if self.status in ["APPROVED", "REJECTED"] and not self.approved_at:
             self.approved_at = timezone.now()
@@ -252,14 +247,7 @@ class TestRecord(AuditableMixin, models.Model):
             is_new = self.pk is None
             super().save(*args, **kwargs)
 
-            # --- Side Effect: Create retest record AFTER saving the status change ---
-            # if (
-            #     original_status not in ["RETEST_ORDERED"]
-            #     and self.status == "RETEST_ORDERED"
-            # ):
-            #     self._create_retest()
-
-            # --- Auto-generate record_id (your existing logic is good) ---
+            # Auto-generate record_id for new instances
             if is_new and not self.record_id:
                 # Use select_for_update to lock rows and prevent race conditions
                 last_record = (
@@ -272,12 +260,17 @@ class TestRecord(AuditableMixin, models.Model):
                 sequence = 1
                 if last_record and last_record.record_id:
                     try:
-                        last_sequence = int(last_record.record_id.split("-")[-1])
+                        # The prefix + date part is still 10 chars (TRDDMMYYYY), so this slice works
+                        last_sequence = int(last_record.record_id[10:])
                         sequence = last_sequence + 1
                     except (ValueError, IndexError):
                         pass  # Fallback to 1 if parsing fails
 
-                date_str = self.created_at.strftime("%Y%m%d")
-                self.record_id = f"TR-{date_str}-{sequence:02d}"
+                # Changed date format to DDMMYYYY for Indian standard
+                date_str = self.created_at.strftime("%d%m%Y")
+
+                # New format with a 6-digit padded sequence number
+                self.record_id = f"TR{date_str}{sequence:06d}"
+
                 # Save only the record_id field to avoid triggering save recursion
                 super().save(update_fields=["record_id"])

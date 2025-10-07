@@ -37,7 +37,6 @@ INSTALLED_APPS = [
     "alerts",
     "django_filters",
     "corsheaders",
-    # "django_extensions",
 ]
 
 MIDDLEWARE = [

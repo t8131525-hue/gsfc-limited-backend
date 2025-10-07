@@ -1,6 +1,7 @@
 # alerts/models.py
 from django.db import models, transaction
 from django.conf import settings
+from django.core.exceptions import ValidationError
 
 
 class Alert(models.Model):
@@ -51,29 +52,48 @@ class Alert(models.Model):
         verbose_name_plural = "Alerts"
 
     def save(self, *args, **kwargs):
-        is_new = self.pk is None
+        # The full_clean() call ensures our custom validation runs before saving.
+        if self.pk is None:  # Only run on initial creation
+            self.full_clean()
+
         super().save(*args, **kwargs)
 
-        if is_new and not self.alert_id:
+    def clean(self):
+        """
+        Custom validation, primarily to handle the alert_id generation logic
+        and prevent creating new alerts if the daily limit is reached.
+        """
+        super().clean()
+        if self.pk is None and not self.alert_id:  # Only on creation
             with transaction.atomic():
                 last_alert = (
                     Alert.objects.select_for_update()
                     .filter(created_at__date=self.created_at.date())
-                    .exclude(pk=self.pk)
                     .order_by("pk")
                     .last()
                 )
                 sequence = 1
                 if last_alert and last_alert.alert_id:
                     try:
-                        last_sequence = int(last_alert.alert_id.split("-")[-1])
+                        # Parse sequence from 'ALDDMMYYYYNNNNNN'
+                        last_sequence = int(last_alert.alert_id[10:])
                         sequence = last_sequence + 1
                     except (ValueError, IndexError):
-                        pass
+                        pass  # Fallback to 1
 
-                date_str = self.created_at.strftime("%Y%m%d")
-                self.alert_id = f"AL-{date_str}-{sequence:02d}"
-                super().save(update_fields=["alert_id"])
+                # NEW: Add edge case to enforce the daily limit
+                if sequence > 9999999:
+                    raise ValidationError(
+                        "Maximum daily alert limit (9,999,999) has been reached. "
+                        "Cannot create new alert."
+                    )
+
+                # Change date format to DDMMYYYY
+                date_str = self.created_at.strftime("%d%m%Y")
+
+                # New format with 7-digit padding
+                self.alert_id = f"AL{date_str}{sequence:07d}"
 
     def __str__(self):
-        return f"Alert {self.alert_id} for Test Record {self.test_record.record_id}"
+        alert_id_display = self.alert_id or "Unassigned"
+        return f"Alert {alert_id_display} for Test Record {self.test_record.record_id}"
