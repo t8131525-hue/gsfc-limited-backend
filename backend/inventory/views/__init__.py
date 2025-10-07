@@ -10,6 +10,7 @@ from .TestResultViewSet import TestResultViewSet
 from .LabViewSet import LabViewSet
 from .DailyStatsView import DailyStatsView
 from .UserStatsView import UserSummaryCountsView, UserPerformanceChartView
+from .QualityTrendView import QualityTrendView
 
 __all__ = [
     "InventoryStatsView",
@@ -23,4 +24,5 @@ __all__ = [
     "DailyStatsView",
     "UserSummaryCountsView",
     "UserPerformanceChartView",
+    "QualityTrendView",
 ]
