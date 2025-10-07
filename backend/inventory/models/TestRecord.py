@@ -107,6 +107,7 @@ class TestRecord(AuditableMixin, models.Model):
                 "can_view_all_test_records",
                 "Can view all test records from all analysts",
             ),
+            ("can_view_quality_trends", "Can view quality trends graphs"),
         ]
 
     def __str__(self):
