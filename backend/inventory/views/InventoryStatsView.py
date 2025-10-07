@@ -9,7 +9,10 @@ class InventoryStatsView(APIView):
     A dedicated view to provide key statistics for the inventory dashboard.
     """
 
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [
+        permissions.IsAuthenticated,
+        permissions.DjangoModelPermissions,
+    ]
 
     def get(self, request, *args, **kwargs):
         total_products = Product.objects.count()

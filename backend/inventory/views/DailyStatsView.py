@@ -7,6 +7,7 @@ from django.utils import timezone
 from ..models import TestRecord
 from ..serializers import DailyStatsSerializer
 
+
 class DailyStatsView(APIView):
     """
     Provides statistics for test records created today.
@@ -17,7 +18,11 @@ class DailyStatsView(APIView):
     The counts respect user permissions (analysts see their own stats,
     managers see all).
     """
-    permission_classes = [permissions.IsAuthenticated]
+
+    permission_classes = [
+        permissions.IsAuthenticated,
+        permissions.DjangoModelPermissions,
+    ]
 
     def get(self, request, *args, **kwargs):
         user = request.user
@@ -32,12 +37,12 @@ class DailyStatsView(APIView):
 
         # Calculate stats efficiently in the database
         stats_data = {
-            'total_tests': queryset.count(),
-            'pending_tests': queryset.filter(status='PENDING').count(),
-            'approved_tests': queryset.filter(status='APPROVED').count(),
-            'rejected_tests': queryset.filter(status='REJECTED').count(),
+            "total_tests": queryset.count(),
+            "pending_tests": queryset.filter(status="PENDING").count(),
+            "approved_tests": queryset.filter(status="APPROVED").count(),
+            "rejected_tests": queryset.filter(status="REJECTED").count(),
         }
 
         serializer = DailyStatsSerializer(data=stats_data)
-        serializer.is_valid(raise_exception=True) # Ensure data matches serializer
+        serializer.is_valid(raise_exception=True)  # Ensure data matches serializer
         return Response(serializer.data)
