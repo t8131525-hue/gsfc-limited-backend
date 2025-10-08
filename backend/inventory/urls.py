@@ -14,6 +14,7 @@ from .views import (
     UserPerformanceChartView,
     UserSummaryCountsView,
     QualityTrendView,
+    ProductHealthDashboardView,
 )
 
 router = DefaultRouter()
@@ -40,5 +41,10 @@ urlpatterns = router.urls + [
         "stats/users/<int:user_id>/summary-counts/",
         UserSummaryCountsView.as_view(),
         name="user_summary_counts",
+    ),
+    path(
+        "dashboard/product-health/",
+        ProductHealthDashboardView.as_view(),
+        name="dashboard-product-health",
     ),
 ]
