@@ -2,6 +2,7 @@
 from django.db import models, transaction
 from django.conf import settings
 from django.core.exceptions import ValidationError
+from django.utils import timezone
 
 
 class Alert(models.Model):
@@ -52,8 +53,10 @@ class Alert(models.Model):
         verbose_name_plural = "Alerts"
 
     def save(self, *args, **kwargs):
-        # The full_clean() call ensures our custom validation runs before saving.
-        if self.pk is None:  # Only run on initial creation
+        if self.pk is None and not self.created_at:
+            self.created_at = timezone.now()
+
+        if self.pk is None:
             self.full_clean()
 
         super().save(*args, **kwargs)

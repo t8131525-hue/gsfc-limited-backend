@@ -1,8 +1,7 @@
-from django.urls import path
+from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 
-# Import all your corrected ViewSets
-from inventory.views import (
+from .views import (
     ProductViewSet,
     ProductGradeViewSet,
     ParameterDefinitionViewSet,
@@ -18,8 +17,6 @@ from inventory.views import (
 )
 
 router = DefaultRouter()
-
-# Register the ViewSets with the router
 router.register(r"labs", LabViewSet, basename="lab")
 router.register(r"products", ProductViewSet, basename="product")
 router.register(r"grades", ProductGradeViewSet, basename="productgrade")
@@ -30,10 +27,7 @@ router.register(r"versions", VersionViewSet, basename="version")
 router.register(r"tests", TestRecordViewSet, basename="testrecord")
 router.register(r"results", TestResultViewSet, basename="testresult")
 
-
-urlpatterns = router.urls
-
-urlpatterns += [
+urlpatterns = router.urls + [
     path("stats/daily-records/", DailyStatsView.as_view(), name="daily_record_stats"),
     path("stats/", InventoryStatsView.as_view(), name="inventory-stats"),
     path(

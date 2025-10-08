@@ -23,7 +23,8 @@ class DailyStatsView(APIView):
         permissions.IsAuthenticated,
         permissions.DjangoModelPermissions,
     ]
-
+    queryset = TestRecord.objects.none()
+    
     def get(self, request, *args, **kwargs):
         user = request.user
         today = timezone.now().date()

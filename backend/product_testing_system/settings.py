@@ -1,4 +1,3 @@
-import os
 import environ
 from pathlib import Path
 from datetime import timedelta
@@ -113,16 +112,13 @@ AUTHENTICATION_BACKENDS = [
 ]
 
 REST_FRAMEWORK = {
-    # Authentication Settings
     "DEFAULT_AUTHENTICATION_CLASSES": (
         "rest_framework_simplejwt.authentication.JWTAuthentication",
         "rest_framework.authentication.SessionAuthentication",
     ),
-    # Permission Settings
     "DEFAULT_PERMISSION_CLASSES": ("rest_framework.permissions.IsAuthenticated",),
-    # Pagination Settings
     "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
-    "PAGE_SIZE": 10,
+    "PAGE_SIZE": 25,
 }
 
 SIMPLE_JWT = {
