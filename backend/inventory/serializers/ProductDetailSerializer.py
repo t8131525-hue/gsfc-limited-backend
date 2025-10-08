@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from ..models import Product, Version, TestRecord, ParameterDefinition
+from ..models import Product, TestRecord, ParameterDefinition, ProductGrade
 
 
 # A serializer for the aggregated trend data (avg, min, max)
@@ -19,12 +19,16 @@ class AggregatedTrendSerializer(serializers.ModelSerializer):
         fields = ["id", "name", "unit", "min_value", "max_value", "data_points"]
 
 
+class GradeWithTrendsSerializer(serializers.ModelSerializer):
+    trends = AggregatedTrendSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = ProductGrade
+        fields = ["id", "name", "trends"]
+
+
 # A lightweight serializer for the recent tests table
 class RecentTestRecordSerializer(serializers.ModelSerializer):
-    # analyst_full_name = serializers.CharField(
-    #     source="analyst.get_full_name", read_only=True, default=""
-    # )
-
     class Meta:
         model = TestRecord
         fields = ["id", "record_id", "status", "created_at"]
@@ -36,7 +40,9 @@ class ProductQualityDetailSerializer(serializers.ModelSerializer):
         source="active_version.version_name", read_only=True
     )
     trends = AggregatedTrendSerializer(many=True, read_only=True)
+    grades = GradeWithTrendsSerializer(many=True, read_only=True)
     recent_tests = RecentTestRecordSerializer(many=True, read_only=True)
+    has_grades = serializers.BooleanField()
 
     class Meta:
         model = Product
@@ -45,6 +51,8 @@ class ProductQualityDetailSerializer(serializers.ModelSerializer):
             "name",
             "product_id",
             "active_version_name",
+            "has_grades",
+            "grades",
             "trends",
             "recent_tests",
         ]
