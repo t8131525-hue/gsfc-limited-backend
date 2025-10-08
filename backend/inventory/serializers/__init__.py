@@ -17,10 +17,7 @@ from .HistoricalTestRecordSerializer import HistoricalTestRecordSerializer
 from .RecentTestRecordSerializer import RecentTestRecordSerializer
 from .DailyStatsSerializer import DailyStatsSerializer
 from .UserStatsSerializer import UserPerformanceSerializer, UserSummaryCountsSerializer
-from .QualityTrendSerializer import (
-    QualityTrendSerializer,
-    QualityTrendDataPointSerializer,
-)
+from .ProductDetailSerializer import ProductQualityDetailSerializer
 
 __all__ = [
     "AssignAnalystSerializer",
@@ -41,6 +38,5 @@ __all__ = [
     "DailyStatsSerializer",
     "UserPerformanceSerializer",
     "UserSummaryCountsSerializer",
-    "QualityTrendSerializer",
-    "QualityTrendDataPointSerializer",
+    "ProductQualityDetailSerializer",
 ]

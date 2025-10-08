@@ -1,4 +1,4 @@
-from django.urls import path, include
+from django.urls import path
 from rest_framework.routers import DefaultRouter
 
 from .views import (
@@ -12,9 +12,7 @@ from .views import (
     LabViewSet,
     DailyStatsView,
     UserPerformanceChartView,
-    UserSummaryCountsView,
-    QualityTrendView,
-    ProductHealthDashboardView,
+    ProductQualityDetailView,
 )
 
 router = DefaultRouter()
@@ -36,15 +34,9 @@ urlpatterns = router.urls + [
         UserPerformanceChartView.as_view(),
         name="user_performance_chart",
     ),
-    path("stats/quality-trends/", QualityTrendView.as_view(), name="quality-trends"),
     path(
-        "stats/users/<int:user_id>/summary-counts/",
-        UserSummaryCountsView.as_view(),
-        name="user_summary_counts",
-    ),
-    path(
-        "dashboard/product-health/",
-        ProductHealthDashboardView.as_view(),
-        name="dashboard-product-health",
+        "products/<int:product_id>/quality-details/",
+        ProductQualityDetailView.as_view(),
+        name="product-quality-details",
     ),
 ]
