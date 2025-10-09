@@ -1,9 +1,10 @@
 from rest_framework import serializers
-from ..models import TestRecord, TestResult, Version
+from ..models import TestRecord, TestResult, ParameterDefinition
 from alerts.models import Alert
 from .TestResultDisplaySerializer import TestResultDisplaySerializer
 from .TestResultInputSerializer import TestResultInputSerializer
 from django.db import transaction
+from decimal import Decimal, InvalidOperation
 
 
 class RelatedTestRecordSerializer(serializers.ModelSerializer):
@@ -153,3 +154,37 @@ class TestRecordSerializer(serializers.ModelSerializer):
                     id__in=[res.id for res in existing_results.values()]
                 ).delete()
         return instance
+
+    def validate_results_input(self, results_data):
+        """
+        Custom validation for the results_input to check for oversized decimal values
+        before they hit the database.
+        """
+        for result in results_data:
+            param_def = result.get("parameter")
+            value = result.get("value")
+
+            if param_def and param_def.data_type in ["DECIMAL", "INTEGER"]:
+                try:
+                    # Check if the value can be converted to a Decimal
+                    decimal_value = Decimal(value)
+                    # Check precision and scale against your model's DecimalField
+                    # max_digits=10, decimal_places=4
+                    if decimal_value.as_tuple().exponent < -4:
+                        raise serializers.ValidationError(
+                            {
+                                f"param_{param_def.id}": "Ensure that there are no more than 4 decimal places."
+                            }
+                        )
+                    if len(decimal_value.as_tuple().digits) > 10:
+                        raise serializers.ValidationError(
+                            {
+                                f"param_{param_def.id}": "Ensure that there are no more than 10 digits in total."
+                            }
+                        )
+                except (InvalidOperation, TypeError):
+                    # This handles cases where value is not a valid number string
+                    raise serializers.ValidationError(
+                        {f"param_{param_def.id}": "A valid number is required."}
+                    )
+        return results_data

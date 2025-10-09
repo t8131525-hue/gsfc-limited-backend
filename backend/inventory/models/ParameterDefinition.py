@@ -21,15 +21,14 @@ class ParameterDefinition(AuditableMixin, models.Model):
         ("BOOLEAN", "Boolean"),
         ("ENUM", "Enum (Dropdown)"),
     ]
-    data_type = models.CharField(max_length=10, choices=DATA_TYPE_CHOICES)
-    unit = models.CharField(max_length=50, blank=True, null=True)
+    data_type = models.CharField(max_length=8, choices=DATA_TYPE_CHOICES)
+    unit = models.CharField(max_length=10, blank=True, null=True)
     is_required = models.BooleanField(default=True)
     enum_options = models.JSONField(
         blank=True,
         null=True,
         help_text='For ENUM type, provide options as a JSON array, e.g., ["Option1", "Option2"]',
     )
-    # Min/Max values now live here to define the parameter's range
     min_value = models.DecimalField(
         max_digits=10, decimal_places=4, null=True, blank=True
     )
