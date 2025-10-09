@@ -1,3 +1,4 @@
+import openpyxl
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import permissions, status
@@ -6,8 +7,9 @@ from django.utils import timezone
 from datetime import timedelta
 from django.db.models import Avg, Min, Max
 from django.db.models.functions import TruncDate
+from django.http import HttpResponse
 
-from ..models import Product, TestResult, TestRecord, ParameterDefinition, ProductGrade
+from ..models import Product, TestResult, TestRecord
 from ..serializers import ProductQualityDetailSerializer
 
 
@@ -90,7 +92,10 @@ class ProductQualityDetailView(APIView):
         recent_tests = TestRecord.objects.filter(version__product=product).order_by(
             "-created_at"
         )[:10]
-
+        if request.query_params.get("format") == "excel":
+            return self.export_to_excel(
+                product, active_version, trends_data, grades_data, recent_tests
+            )
         context_data = {
             "id": product.id,
             "name": product.name,
@@ -104,3 +109,65 @@ class ProductQualityDetailView(APIView):
 
         serializer = ProductQualityDetailSerializer(context_data)
         return Response(serializer.data)
+
+    def export_to_excel(
+        self, product, active_version, trends_data, grades_data, recent_tests
+    ):
+        workbook = openpyxl.Workbook()
+
+        # --- Summary Sheet ---
+        summary_ws = workbook.active
+        summary_ws.title = "Summary"
+        summary_ws.append(["Product Name", product.name])
+        summary_ws.append(["Product ID", product.product_id])
+        summary_ws.append(["Active Version", active_version.version_name])
+        summary_ws.append(
+            ["Report Generated On", timezone.now().strftime("%Y-%m-%d %H:%M:%S")]
+        )
+
+        # --- Trends Data Sheet(s) ---
+        if grades_data:
+            for grade in grades_data:
+                ws = workbook.create_sheet(title=f"Trends - {grade.name[:20]}")
+                self._write_trends_to_sheet(ws, grade.trends)
+        else:
+            ws = workbook.create_sheet(title="Trends Data")
+            self._write_trends_to_sheet(ws, trends_data)
+
+        # --- Recent Tests Sheet ---
+        recent_tests_ws = workbook.create_sheet(title="Recent Tests")
+        recent_tests_ws.append(["Record ID", "Status", "Analyst", "Date"])
+        for test in recent_tests:
+            analyst_name = test.analyst.get_full_name() if test.analyst else "N/A"
+            naive_datetime = timezone.make_naive(test.created_at)
+            recent_tests_ws.append(
+                [test.record_id, test.status, analyst_name, naive_datetime]
+            )
+
+        # Prepare and return the response
+        response = HttpResponse(
+            content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        )
+        safe_product_name = "".join(
+            c for c in product.name if c.isalnum() or c in (" ", "_")
+        ).rstrip()
+        response["Content-Disposition"] = (
+            f'attachment; filename="{safe_product_name}_Quality_Report.xlsx"'
+        )
+        workbook.save(response)
+
+        return response
+
+    # ✅ 5. Add a helper method to write trend data to a sheet
+    def _write_trends_to_sheet(self, worksheet, trends):
+        for param in trends:
+            worksheet.append(
+                [
+                    f"Parameter: {param.name}",
+                    f"Spec Range: {param.min_value or '-'} to {param.max_value or '-'}",
+                ]
+            )
+            worksheet.append(["Date", "Average", "Minimum", "Maximum"])
+            for dp in param.data_points:
+                worksheet.append([dp["date"], dp["avg"], dp["min"], dp["max"]])
+            worksheet.append([])  # Add a blank row for spacing
