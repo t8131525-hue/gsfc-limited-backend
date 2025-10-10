@@ -89,9 +89,9 @@ class ProductQualityDetailView(APIView):
                 param.data_points = list(daily_aggregates)
                 trends_data.append(param)
 
-        recent_tests = TestResult.objects.filter(
-            test_record__version__product=product
-        ).order_by("-test_record__created_at")[:10]
+        recent_tests = TestRecord.objects.filter(version__product=product).order_by(
+            "-created_at"
+        )[:10]
 
         if request.query_params.get("format") == "excel":
             # ✅ 1. Pass the start and end dates to the export function
