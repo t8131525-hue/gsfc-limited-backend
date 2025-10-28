@@ -18,7 +18,9 @@ from .RecentTestRecordSerializer import RecentTestRecordSerializer
 from .DailyStatsSerializer import DailyStatsSerializer
 from .UserStatsSerializer import UserPerformanceSerializer, UserSummaryCountsSerializer
 from .ProductDetailSerializer import ProductQualityDetailSerializer
-
+from .ParameterDefinitionLiteSerializer import ParameterDefinitionLiteSerializer
+from .ProductGradeLiteSerializer import ProductGradeLiteSerializer
+from .VersionNestedLiteSerializer import VersionNestedLiteSerializer
 __all__ = [
     "AssignAnalystSerializer",
     "ParameterDefinitionSerializer",
@@ -39,4 +41,7 @@ __all__ = [
     "UserPerformanceSerializer",
     "UserSummaryCountsSerializer",
     "ProductQualityDetailSerializer",
+    "ParameterDefinitionLiteSerializer",
+    "ProductGradeLiteSerializer",
+    "VersionNestedLiteSerializer",
 ]
