@@ -28,7 +28,6 @@ class Product(AuditableMixin, models.Model):
         return self.name
 
     
-# ✅ ADD THIS at the bottom of the file
 @receiver(post_save, sender=Product)
 def assign_product_id(sender, instance, created, **kwargs):
     if created and not instance.product_id:

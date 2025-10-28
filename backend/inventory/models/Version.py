@@ -9,14 +9,13 @@ from django.conf import settings
 from django.contrib.contenttypes.fields import GenericRelation
 from django.contrib.contenttypes.models import ContentType
 
-# REVAMPED: Renamed class from Specification to Version
+
 class Version(AuditableMixin, models.Model):
     STATUS_CHOICES = [("DRAFT", "Draft"), ("LOCKED", "Locked")]
 
     product = models.ForeignKey(
         "inventory.Product",
         on_delete=models.CASCADE,
-        # REVAMPED: Updated related_name
         related_name="versions",
     )
     parameters = GenericRelation("inventory.ParameterDefinition")
@@ -41,7 +40,6 @@ class Version(AuditableMixin, models.Model):
 
     class Meta:
         unique_together = [("product", "version_name")]
-        # REVAMPED: Updated verbose names
         verbose_name = "Version"
         verbose_name_plural = "Versions"
         permissions = [
@@ -49,8 +47,7 @@ class Version(AuditableMixin, models.Model):
         ]
 
     def clean(self):
-        # This check should be first
-        if self.pk:  # Only check for existing instances
+        if self.pk:
             has_parameters = self.parameters.exists()
             has_grades = self.grades.exists()
             if has_parameters and has_grades:
@@ -59,7 +56,15 @@ class Version(AuditableMixin, models.Model):
                         "A Version cannot have both Parameters and Product Grades defined directly. Grades should encapsulate their own parameters."
                     )
                 )
-
+        if self.status == "LOCKED":
+            if not has_parameters and not has_grades:
+                raise ValidationError(
+                    {
+                        "status": _(
+                            "Cannot lock a version. You must first define either parameters for the version or product grades."
+                        )
+                    }
+                )
         if self.is_active and self.status != "LOCKED":
             raise ValidationError(
                 {
@@ -77,9 +82,10 @@ class Version(AuditableMixin, models.Model):
             self.activated_at = now()
         elif not self.is_active:
             self.activated_at = None
+        
+        self.full_clean()
 
         if self.is_active:
-            # REVAMPED: Use the new class name here
             Version.objects.filter(product=self.product, is_active=True).exclude(
                 pk=self.pk
             ).update(is_active=False)
@@ -94,18 +100,14 @@ class Version(AuditableMixin, models.Model):
             version_name=f"Draft of {self.version_name}",
         )
 
-        # This part is for cloning grades (looks okay)
         for grade in self.grades.all():
             grade.pk = None
             grade.version = new_version
             grade.save()
 
-        # ✅ THIS PART IS THE FIX for cloning direct parameters
-        # Get the ContentType for the Version model once
         version_content_type = ContentType.objects.get_for_model(Version)
         for param in self.parameters.all():
             param.pk = None
-            # You must set content_type and object_id directly
             param.content_type = version_content_type
             param.object_id = new_version.pk
             param.save()
