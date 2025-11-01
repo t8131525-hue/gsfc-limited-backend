@@ -21,6 +21,7 @@ from .ParameterDefinitionLiteSerializer import ParameterDefinitionLiteSerializer
 from .ProductGradeLiteSerializer import ProductGradeLiteSerializer
 from .VersionNestedLiteSerializer import VersionNestedLiteSerializer
 from .VersionListSerializer import VersionListSerializer
+from .ProductSelectSerializer import ProductSelectSerializer
 __all__ = [
     "AssignAnalystSerializer",
     "ParameterDefinitionSerializer",
@@ -44,4 +45,5 @@ __all__ = [
     "ProductGradeLiteSerializer",
     "VersionNestedLiteSerializer",
     "VersionListSerializer",
+    "ProductSelectSerializer",
 ]

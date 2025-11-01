@@ -222,8 +222,16 @@ class TestRecordViewSet(viewsets.ModelViewSet):
             test_record.supervisor_comments = comments
             test_record.approved_by = user
             test_record.approved_at = timezone.now()
-            test_record.save()
-
+            test_record.decision = new_status  # Set the permanent decision
+            test_record.save(
+                update_fields=[
+                    "status",
+                    "supervisor_comments",
+                    "approved_by",
+                    "approved_at",
+                    "decision",
+                ]
+            )
             log_custom_event(
                 instance=test_record,
                 action_type=new_status,

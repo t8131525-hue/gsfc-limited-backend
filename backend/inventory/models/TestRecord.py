@@ -56,7 +56,17 @@ class TestRecord(AuditableMixin, models.Model):
         ("RETEST_ORDERED", "Retest Ordered"),
     ]
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="PENDING")
-
+    DECISION_CHOICES = [
+        ("APPROVED", "Approved"),
+        ("REJECTED", "Rejected"),
+    ]
+    decision = models.CharField(
+        max_length=10,
+        choices=DECISION_CHOICES,
+        null=True,
+        blank=True,
+        help_text="The final approval or rejection decision, preserved when closed.",
+    )
     # User, approval tracking and Time stamps
     analyst = models.ForeignKey(
         User,
@@ -233,8 +243,9 @@ class TestRecord(AuditableMixin, models.Model):
 
     def save(self, *args, **kwargs):
         # Set timestamps for status changes
-        if self.status in ["APPROVED", "REJECTED"] and not self.approved_at:
-            self.approved_at = timezone.now()
+        # if self.status in ["APPROVED", "REJECTED"] and not self.approved_at:
+        #     self.approved_at = timezone.now()
+        #     self.decision = self.status
         if self.status == "CLOSED" and not self.closed_at:
             self.closed_at = timezone.now()
         if self.status == "RETEST_ORDERED" and not self.retest_ordered_at:

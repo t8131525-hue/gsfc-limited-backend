@@ -19,6 +19,20 @@ class ProductViewSet(viewsets.ModelViewSet):
     ordering_fields = ["name", "created_at"]
     ordering = ["-created_at"]
 
+    def get_queryset(self):
+        """
+        Dynamically filter the queryset.
+
+        - By default, return all products.
+        - If 'is_active=true' is in the query params,
+          return only products with an active, locked version.
+        """
+        queryset = super().get_queryset()
+        is_active_filter = self.request.query_params.get("is_active")
+        if is_active_filter == "true":
+            queryset = queryset.filter(versions__is_active=True).distinct()
+        return queryset
+
     def get_serializer_class(self):
         """
         Use the lightweight ProductListSerializer for 'list' actions
@@ -32,6 +46,6 @@ class ProductViewSet(viewsets.ModelViewSet):
         """
         Dynamically disable pagination if 'all=true' is in the query params.
         """
-        if self.request.query_params.get('all') == 'true':
-            return None  # This disables pagination and returns a full list
-        return self.pagination_class # Use default pagination
+        if self.request.query_params.get("all") == "true":
+            return None
+        return self.pagination_class
