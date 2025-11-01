@@ -12,10 +12,8 @@ from rest_framework import viewsets, permissions, status
 from ..serializers import (
     TestRecordSerializer,
     RecentTestRecordSerializer,
-    HistoricalTestRecordSerializer,
 )
 
-# Add all of these at the top of the file
 from django.utils import timezone
 from django.db import transaction
 from django.contrib.auth import get_user_model
@@ -26,18 +24,16 @@ User = get_user_model()
 
 
 class TestRecordViewSet(viewsets.ModelViewSet):
-    # The base queryset is simple; logic is moved to get_queryset
     queryset = TestRecord.objects.all()
-    # The default serializer for retrieve/create/update actions
     serializer_class = TestRecordSerializer
     permission_classes = [permissions.IsAuthenticated]
     pagination_class = StandardResultsSetPagination
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     filterset_class = TestRecordFilter
     search_fields = [
-        "sample_id", 
-        "batch_no", 
-        "version__product__name", 
+        "sample_id",
+        "batch_no",
+        "version__product__name",
         "record_id",
         "analyst__username",
         "analyst__first_name",
@@ -55,16 +51,13 @@ class TestRecordViewSet(viewsets.ModelViewSet):
         user = self.request.user
         view_type = self.request.query_params.get("view_type", "recent")
 
-        # Base queryset with performance optimizations
         queryset = TestRecord.objects.select_related(
             "version__product", "product_grade", "analyst", "lab"
         ).all()
 
-        # Permission-based filtering
         if not user.has_perm("inventory.can_view_all_test_records"):
             queryset = queryset.filter(analyst=user)
 
-        # Automatic date filtering for the "Recent" view
         if self.action == "list" and view_type == "recent":
             today = timezone.now().date()
             queryset = queryset.filter(created_at__date=today)
@@ -80,7 +73,7 @@ class TestRecordViewSet(viewsets.ModelViewSet):
         if self.action == "list":
             view_type = self.request.query_params.get("view_type", "recent")
             if view_type == "historical":
-                return HistoricalTestRecordSerializer
+                return RecentTestRecordSerializer
             return RecentTestRecordSerializer
 
         return TestRecordSerializer
@@ -141,7 +134,6 @@ class TestRecordViewSet(viewsets.ModelViewSet):
             )
 
         with transaction.atomic():
-            # Lock the original test to prevent simultaneous actions
             original_test = self.get_object()
             if original_test.status not in ["APPROVED", "REJECTED"]:
                 return Response(
@@ -190,7 +182,6 @@ class TestRecordViewSet(viewsets.ModelViewSet):
         response_serializer = self.get_serializer(new_test)
         return Response(response_serializer.data, status=status.HTTP_201_CREATED)
 
-    # Approve/Reject
     @action(
         detail=True, methods=["patch"], permission_classes=[permissions.IsAuthenticated]
     )
@@ -243,7 +234,6 @@ class TestRecordViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(test_record)
         return Response(serializer.data)
 
-    # Close the record
     @action(
         detail=True, methods=["post"], permission_classes=[permissions.IsAuthenticated]
     )

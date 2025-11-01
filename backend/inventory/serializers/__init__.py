@@ -13,7 +13,6 @@ from .TestResultInputSerializer import TestResultInputSerializer
 from .VersionNestedSerializer import VersionNestedSerializer
 from .VersionSerializer import VersionSerializer
 from .LabSerializer import LabSerializer
-from .HistoricalTestRecordSerializer import HistoricalTestRecordSerializer
 from .RecentTestRecordSerializer import RecentTestRecordSerializer
 from .DailyStatsSerializer import DailyStatsSerializer
 from .UserStatsSerializer import UserPerformanceSerializer, UserSummaryCountsSerializer
@@ -21,6 +20,7 @@ from .ProductDetailSerializer import ProductQualityDetailSerializer
 from .ParameterDefinitionLiteSerializer import ParameterDefinitionLiteSerializer
 from .ProductGradeLiteSerializer import ProductGradeLiteSerializer
 from .VersionNestedLiteSerializer import VersionNestedLiteSerializer
+from .VersionListSerializer import VersionListSerializer
 __all__ = [
     "AssignAnalystSerializer",
     "ParameterDefinitionSerializer",
@@ -35,7 +35,6 @@ __all__ = [
     "VersionSerializer",
     "ProductListSerializer",
     "LabSerializer",
-    "HistoricalTestRecordSerializer",
     "RecentTestRecordSerializer",
     "DailyStatsSerializer",
     "UserPerformanceSerializer",
@@ -44,4 +43,5 @@ __all__ = [
     "ParameterDefinitionLiteSerializer",
     "ProductGradeLiteSerializer",
     "VersionNestedLiteSerializer",
+    "VersionListSerializer",
 ]

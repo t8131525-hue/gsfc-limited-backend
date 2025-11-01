@@ -97,7 +97,7 @@ class Version(AuditableMixin, models.Model):
         new_version = Version.objects.create(
             product=self.product,
             created_by=self.created_by,
-            version_name=f"Draft of {self.version_name}",
+            version_name=f"Copy of {self.version_name}",
         )
 
         for grade in self.grades.all():

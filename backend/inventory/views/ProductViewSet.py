@@ -20,6 +20,18 @@ class ProductViewSet(viewsets.ModelViewSet):
     ordering = ["-created_at"]
 
     def get_serializer_class(self):
+        """
+        Use the lightweight ProductListSerializer for 'list' actions
+        and the full ProductSerializer for 'retrieve'.
+        """
         if self.action == "list":
             return ProductListSerializer
-        return ProductSerializer
+        return self.serializer_class
+
+    def get_pagination_class(self):
+        """
+        Dynamically disable pagination if 'all=true' is in the query params.
+        """
+        if self.request.query_params.get('all') == 'true':
+            return None  # This disables pagination and returns a full list
+        return self.pagination_class # Use default pagination
