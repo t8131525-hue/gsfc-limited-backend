@@ -1,3 +1,8 @@
+import base64
+import os
+import io
+from openpyxl import Workbook
+from openpyxl.styles import Font
 from rest_framework import viewsets, permissions
 from ..models import TestRecord
 from django_filters.rest_framework import DjangoFilterBackend
@@ -13,12 +18,16 @@ from ..serializers import (
     TestRecordSerializer,
     RecentTestRecordSerializer,
 )
-
+from django.template.loader import render_to_string
+from django.http import HttpResponse
 from django.utils import timezone
 from django.db import transaction
 from django.contrib.auth import get_user_model
 from audit_trail.utils import log_custom_event
 from ..serializers.AssignAnalystSerializer import AssignAnalystSerializer
+from weasyprint import HTML
+from django.conf import settings
+
 
 User = get_user_model()
 
@@ -78,6 +87,184 @@ class TestRecordViewSet(viewsets.ModelViewSet):
 
         return TestRecordSerializer
 
+    @action(
+        detail=True,
+        methods=["get"],
+        url_path="download-pdf",
+        permission_classes=[permissions.IsAuthenticated],
+    )
+    def download_pdf(self, request, pk=None):
+        """
+        Generates and returns a PDF report for a specific test record.
+        """
+        try:
+            # 1. Get the raw model instance (for header, comments, etc.)
+            instance = self.get_object()
+
+            # 2. Get the serialized data (for the table and signatures)
+            #    We use self.get_serializer() to respect the ViewSet's logic
+            serializer = self.get_serializer(instance, context={"request": request})
+            record_data = serializer.data
+
+            # 3. Load and encode the company logo
+            logo_base64 = None
+            logo_path = os.path.join(settings.BASE_DIR, "static", "images", "logo.png")
+
+            try:
+                with open(logo_path, "rb") as image_file:
+                    logo_base64 = base64.b64encode(image_file.read()).decode("utf-8")
+            except FileNotFoundError:
+                # Handle case where logo is missing
+                print(f"Logo file not found at {logo_path}")
+                pass  # Continue without a logo
+
+            # 4. Prepare the template context
+            context = {
+                "record": instance,  # 👈 Pass the instance for header/comments
+                "data": record_data,  # 👈 Pass the serialized data for the table/signatures
+                "logo_base64": logo_base64,
+            }
+
+            # 5. Render the HTML template
+            html_string = render_to_string("reports/test_record_report.html", context)
+
+            # 6. Convert to PDF
+            pdf_file = HTML(
+                string=html_string, base_url=request.build_absolute_uri()
+            ).write_pdf()
+
+            # 7. Create the HTTP response
+            response = HttpResponse(pdf_file, content_type="application/pdf")
+            response["Content-Disposition"] = (
+                f'attachment; filename="Report-{instance.record_id}.pdf"'
+            )
+
+            return response
+
+        except Exception as e:
+            # Add this for better debugging in your console
+            import traceback
+
+            traceback.print_exc()
+
+            return Response(
+                {"error": f"Failed to generate PDF: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+
+
+    # 👇 =================================================================
+    # 👇   ADD THIS NEW FUNCTION
+    # 👇 =================================================================
+    @action(
+        detail=True,
+        methods=["get"],
+        url_path="download-excel",
+        permission_classes=[permissions.IsAuthenticated],
+    )
+    def download_excel(self, request, pk=None):
+        """
+        Generates and returns an Excel (.xlsx) report for a specific test record.
+        """
+        try:
+            # 1. Get object and serializer data
+            instance = self.get_object()
+            serializer = TestRecordSerializer(instance, context={"request": request})
+            record_data = serializer.data
+
+            # 2. Create an in-memory workbook
+            wb = Workbook()
+            ws = wb.active
+            ws.title = "Test Report"
+
+            # Define a bold font style for headers
+            bold_font = Font(bold=True)
+
+            # 3. Add Main Record Details
+            ws.append(["Test Record Details"])
+            ws["A1"].font = bold_font
+            ws.merge_cells("A1:B1")
+
+            main_details = [
+                ("Record ID", record_data.get("record_id")),
+                ("Product", record_data.get("product_name")),
+                ("Grade", record_data.get("product_grade_name", "N/A")),
+                ("Batch No", record_data.get("batch_no")),
+                ("Sample ID", record_data.get("sample_id")),
+                ("Lab", record_data.get("lab_name")),
+                ("Status", record_data.get("status")),
+                ("Decision", record_data.get("decision", "N/A")),
+                ("Analyst", record_data.get("analyst_full_name", "N/A")),
+                ("Approved By", record_data.get("approved_by_full_name", "N/A")),
+                ("Approved At", record_data.get("approved_at")),
+            ]
+
+            for row, (key, value) in enumerate(main_details, start=2):
+                ws[f"A{row}"] = key
+                ws[f"A{row}"].font = bold_font
+                ws[f"B{row}"] = value
+
+            # Add a spacer row
+            spacer_row = len(main_details) + 3
+            ws.append([])  # Add an empty row
+
+            # 4. Add Parameter Results
+            results_header_row = spacer_row
+            ws[f"A{results_header_row}"] = "Test Results"
+            ws[f"A{results_header_row}"].font = bold_font
+            ws.merge_cells(f"A{results_header_row}:D{results_header_row}")
+
+            param_headers = ["Parameter", "Data Type", "Result", "Status"]
+            ws.append(param_headers)
+            for cell in ws[ws.max_row]:  # Get the last row
+                cell.font = bold_font
+
+            # Loop through parameter values and add them
+            param_values = record_data.get("parameter_values", [])
+            if param_values:
+                for param in param_values:
+                    ws.append(
+                        [
+                            param.get("parameter", {}).get("name"),
+                            param.get("parameter", {}).get("data_type"),
+                            param.get("display_value"),
+                            param.get("status"),
+                        ]
+                    )
+            else:
+                ws.append(["No test results recorded."])
+
+            # 5. Set column widths for readability
+            ws.column_dimensions["A"].width = 25
+            ws.column_dimensions["B"].width = 30
+            ws.column_dimensions["C"].width = 20
+            ws.column_dimensions["D"].width = 15
+
+            # 6. Save workbook to an in-memory stream
+            with io.BytesIO() as b:
+                wb.save(b)
+                b.seek(0)  # Rewind the stream
+
+                # 7. Create the HTTP response
+                response = HttpResponse(
+                    b.read(),
+                    content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                )
+                response["Content-Disposition"] = (
+                    f'attachment; filename="Report-{instance.record_id}.xlsx"'
+                )
+                return response
+
+        except Exception as e:
+            return Response(
+                {"error": f"Failed to generate Excel: {str(e)}"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+    # 👇 =================================================================
+    # 👇   END OF NEW FUNCTION
+    # 👇 =================================================================
     @action(
         detail=True, methods=["patch"], permission_classes=[permissions.IsAuthenticated]
     )
