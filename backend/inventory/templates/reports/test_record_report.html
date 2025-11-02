@@ -3,34 +3,12 @@
 
 <head>
     <meta charset="UTF-8">
-    <title>Certificate of Analysis: {{ record.record_id }}</title>
+    <title>Test Report: {{ record.record_id }}</title>
     <style>
-        /* --- Font Definition --- */
-        @font-face {
-            font-family: 'Inter';
-            font-style: normal;
-            font-weight: 400;
-            src: local('Inter Regular'), local('Inter-Regular'), url(https://fonts.gstatic.com/s/inter/v13/UcC73FwrK3iLTeHuS_fvQtMwCp50KnMw2boKoduKmME.woff2) format('woff2');
-        }
-
-        @font-face {
-            font-family: 'Inter';
-            font-style: normal;
-            font-weight: 600;
-            src: local('Inter SemiBold'), local('Inter-SemiBold'), url(https://fonts.gstatic.com/s/inter/v13/UcC73FwrK3iLTeHuS_fvQtMwCp50KnMw2boKoduKmME.woff2) format('woff2');
-        }
-
-        @font-face {
-            font-family: 'Inter';
-            font-style: normal;
-            font-weight: 700;
-            src: local('Inter Bold'), local('Inter-Bold'), url(https://fonts.gstatic.com/s/inter/v13/UcC73FwrK3iLTeHuS_fvQtMwCp50KnMw2boKoduKmME.woff2) format('woff2');
-        }
-
         /* --- Page Setup --- */
         @page {
             size: A4;
-            margin: 2cm 1.5cm 2.5cm 1.5cm;
+            margin: 2.5cm 2cm 2cm 2cm;
             /* Top, Right, Bottom, Left */
 
             @top-center {
@@ -46,12 +24,9 @@
         header {
             position: running(header);
             width: 100%;
-            padding-bottom: 10px;
-            border-bottom: 2px solid #004a99;
-            display: grid;
-            grid-template-columns: 100px 1fr;
+            display: flex;
+            justify-content: space-between;
             align-items: center;
-            gap: 20px;
         }
 
         footer {
@@ -66,32 +41,18 @@
 
         /* --- Main Body Styles --- */
         body {
-            font-family: 'Inter', 'Helvetica', 'Arial', sans-serif;
+            font-family: Arial, Helvetica, sans-serif;
             font-size: 10pt;
             line-height: 1.4;
             color: #333;
         }
 
         h1,
-        h2 {
-            font-weight: 700;
-            color: #004a99;
-            margin-bottom: 15px;
-            padding-bottom: 5px;
-        }
-
-        h1 {
-            text-align: center;
-            font-size: 18pt;
-            margin-bottom: 25px;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            border-bottom: 1px solid #eee;
-        }
-
-        h2 {
-            font-size: 14pt;
-            border-bottom: 1px solid #004a99;
+        h2,
+        h3 {
+            font-weight: 600;
+            color: #00407A;
+            margin-top: 0;
         }
 
         /* --- Header Content --- */
@@ -109,42 +70,98 @@
 
         .company-info strong {
             font-size: 13pt;
-            color: #004a99;
+            color: #00407A;
             font-weight: 700;
             display: block;
             margin-bottom: 5px;
         }
 
-        /* --- Report Info Section --- */
-        .info-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 12px 20px;
-            /* row-gap, column-gap */
-            margin-bottom: 30px;
-            border: 1px solid #ddd;
-            padding: 15px;
-            border-radius: 8px;
-            background-color: #fdfdfd;
+        /* --- New Title Block --- */
+        .title-block {
+            background-color: #00407A;
+            color: #FFFFFF;
+            padding: 15px 20px;
+            margin-bottom: 20px;
+            border-radius: 5px;
         }
 
-        .info-grid>div {
-            padding: 4px;
-        }
-
-        .info-grid .label {
-            font-size: 8pt;
-            font-weight: 600;
-            color: #555;
+        .title-block h1 {
+            color: #FFFFFF;
+            font-size: 20pt;
+            margin: 0;
+            font-weight: 700;
             text-transform: uppercase;
-            display: block;
-            margin-bottom: 2px;
+            letter-spacing: 1px;
         }
 
-        .info-grid .value {
-            font-size: 10pt;
-            font-weight: 400;
+        h2 {
+            font-size: 16pt;
+            border-bottom: 2px solid #00407A;
+            padding-bottom: 5px;
+            margin-top: 25px;
+            margin-bottom: 15px;
+        }
+
+        h3 {
+            font-size: 12pt;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 5px;
+            margin-bottom: 10px;
+        }
+
+        /* * --- NEW "HOSPITAL-STYLE" INFO TABLE ---
+         * This is the updated CSS section you requested.
+         */
+        .info-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+            border: 1px solid #ddd;
+            /* Outer border */
+            page-break-inside: avoid;
+            /* Prevents table from splitting */
+        }
+
+        .info-table tr {
+            border-bottom: 1px solid #ddd;
+        }
+
+        .info-table tr:last-child {
+            border-bottom: none;
+        }
+
+        .info-table td {
+            padding: 6px 8px;
+            /* Reduced padding */
+            vertical-align: top;
+            font-size: 9pt;
+            /* Smaller base font */
+            border-right: 1px solid #eee;
+            /* Light vertical divider */
+        }
+
+        .info-table td:last-child {
+            border-right: none;
+        }
+
+        /* Style for the Label cells (e.g., "Product Name") */
+        .info-table .label {
+            font-weight: 700;
+            color: #333;
+            background-color: #f9f9f9;
+            /* Very light grey for labels */
+            width: 16%;
+            /* Fixed width for labels */
+            white-space: nowrap;
+            /* Prevents label text from wrapping */
+        }
+
+        /* Style for the Value cells */
+        .info-table .value {
+            font-weight: 600;
             color: #000;
+            width: 17.33%;
+            /* Value cells get slightly more space */
         }
 
         /* --- Results Table --- */
@@ -152,23 +169,23 @@
             width: 100%;
             border-collapse: collapse;
             margin-top: 15px;
-            margin-bottom: 30px;
+            margin-bottom: 20px;
+            border: 1px solid #ccc;
         }
 
         .results-table th,
         .results-table td {
             border: 1px solid #ccc;
-            padding: 10px;
+            padding: 8px 10px;
             text-align: left;
             vertical-align: top;
         }
 
         .results-table th {
             background-color: #f0f4f8;
-            /* Light blue header */
             font-weight: 700;
             font-size: 9pt;
-            color: #004a99;
+            color: #00407A;
             text-transform: uppercase;
         }
 
@@ -176,60 +193,29 @@
             background-color: #f9f9f9;
         }
 
-        /* This is the key highlighting class */
         .results-table tr.out-of-spec {
-            background-color: #fdeeee;
-            color: #a94442;
+            background-color: #fff8f8;
+            color: #D8000C;
             font-weight: 600;
         }
 
-        .results-table td:nth-child(1) {
-            text-align: center;
-            width: 40px;
-        }
-
-        /* S.No. */
-        .results-table td:nth-child(2) {
-            width: 25%;
-        }
-
-        /* Parameter */
-        .results-table td:nth-child(3) {
-            width: 15%;
-        }
-
-        /* Specification */
-        .results-table td:nth-child(4) {
-            width: 10%;
-        }
-
-        /* Unit */
-        .results-table td:nth-child(5) {
-            width: 15%;
-            font-weight: 600;
-        }
-
-        /* Result */
-        .results-table td:nth-child(6) {
-            width: 10%;
+        .results-table td:first-child {
             text-align: center;
         }
-
-        /* Status */
-
 
         /* --- Final Decision Banner --- */
         .decision-banner {
             margin-top: 20px;
-            padding: 15px;
+            padding: 20px;
             font-size: 16pt;
             font-weight: 700;
             text-align: center;
-            border-radius: 8px;
-            border-width: 2px;
+            border-radius: 5px;
+            border-width: 1px;
             border-style: solid;
             text-transform: uppercase;
             letter-spacing: 1px;
+            page-break-inside: avoid;
         }
 
         .decision-APPROVED {
@@ -246,21 +232,12 @@
 
         /* --- Comments Section --- */
         .comments-section {
-            margin-top: 25px;
+            margin-top: 20px;
             padding: 15px;
             border: 1px solid #eee;
-            border-radius: 8px;
+            border-radius: 5px;
             background: #fcfcfc;
-        }
-
-        .comments-section h3 {
-            font-size: 11pt;
-            font-weight: 700;
-            color: #333;
-            margin-top: 0;
-            margin-bottom: 8px;
-            border-bottom: 1px solid #ddd;
-            padding-bottom: 5px;
+            page-break-inside: avoid;
         }
 
         .comments-section p {
@@ -268,119 +245,82 @@
             color: #444;
             margin: 0;
             white-space: pre-wrap;
-            /* Preserves line breaks from the textarea */
-        }
-
-        /* --- Signature Section --- */
-        .signature-section {
-            margin-top: 50px;
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 60px;
-            page-break-inside: avoid;
-            /* Try to keep signatures from splitting */
-        }
-
-        .signature-box {
-            border-top: 1px solid #333;
-            padding-top: 10px;
-        }
-
-        .signature-box .signature-line {
-            height: 40px;
-            /* Space for signature */
-            margin-bottom: 10px;
-        }
-
-        .signature-box .label {
-            font-size: 9pt;
-            color: #555;
-            text-transform: uppercase;
-            font-weight: 600;
-        }
-
-        .signature-box .name {
-            font-weight: 700;
-            font-size: 11pt;
-            color: #000;
-            margin-top: 5px;
-        }
-
-        .signature-box .date {
-            font-size: 9pt;
-            color: #555;
-            margin-top: 3px;
         }
     </style>
 </head>
 
 <body>
     <header>
-        <div class="logo-container">
-            {% if logo_base64 %}
-            <img src="data:image/png;base64,{{ logo_base64 }}" alt="GSFC Limited Logo" class="logo">
-            {% else %}
-            <span style="font-size: 9pt; color: #777;">[Logo]</span>
-            {% endif %}
-        </div>
+
         <div class="company-info">
             <strong>GSFC Limited</strong>
             Fertilizernagar - 391 750, Dist. Vadodara, Gujarat, India<br>
             Phone: +91-265-2242451, 2242651, 2242751<br>
             www.gsfclimited.com
         </div>
+        <div class="logo-container">
+            {% if logo_base64 %}
+            <img src="data:image/png;base64,{{ logo_base64 }}" alt="Company Logo" class="logo">
+            {% else %}
+            <span style="font-size: 9pt; color: #777;">[Company Logo]</span>
+            {% endif %}
+        </div>
     </header>
 
     <footer>
-        Report ID: {{ record.record_id }} | Generated: {% now "d-m-Y H:i" %} |
+        Report ID: {{ record.record_id }} | Report Generated at: {% now "d-m-Y H:i" %} |
         Page <span style="content: counter(page);"></span> of <span style="content: counter(pages);"></span>
     </footer>
 
     <main>
-        <h1>Certificate of Analysis</h1>
 
-        <div class="info-grid">
-            <div>
-                <span class="label">Product Name</span>
-                <span class="value">{{ record.version.product.name }}</span>
-            </div>
-            <div>
-                <span class="label">Record ID</span>
-                <span class="value">{{ record.record_id }}</span>
-            </div>
-            <div>
-                <span class="label">Product Grade</span>
-                <span class="value">{{ record.product_grade.name|default:"N/A" }}</span>
-            </div>
-            <div>
-                <span class="label">Batch No.</span>
-                <span class="value">{{ record.batch_no }}</span>
-            </div>
-            <div>
-                <span class="label">Specification Version</span>
-                <span class="value">{{ record.version.version_name }}</span>
-            </div>
-            <div>
-                <span class="label">Sample ID</span>
-                <span class="value">{{ record.sample_id }}</span>
-            </div>
-            <div>
-                <span class="label">Testing Laboratory</span>
-                <span class="value">{{ record.lab.name }}</span>
-            </div>
-            <div>
-                <span class="label">Date Reported</span>
-                <span class="value">{{ record.approved_at|date:"d-m-Y"|default:"-" }}</span>
-            </div>
+        <div class="title-block">
+            <h1>Test Report</h1>
         </div>
 
+        <table class="info-table">
+            <tr>
+                <td class="label">Product Name</td>
+                <td class="value">{{ record.version.product.name }}</td>
+                <td class="label">Record ID</td>
+                <td class="value">{{ record.record_id }}</td>
+                <td class="label">Sample ID</td>
+                <td class="value">{{ record.sample_id }}</td>
+            </tr>
+            <tr>
+                <td class="label">Product Grade</td>
+                <td class="value">{{ record.product_grade.name|default:"N/A" }}</td>
+                <td class="label">Batch No.</td>
+                <td class="value">{{ record.batch_no }}</td>
+                <td class="label">Specification</td>
+                <td class="value">{{ record.version.version_name }}</td>
+            </tr>
+            <tr>
+                <td class="label">Laboratory</td>
+                <td class="value">{{ record.lab.name }}</td>
+                <td class="label">Tested By</td>
+                <td class="value">{{ data.analyst_full_name|default:"N/A" }}</td>
+                <td class="label">Approved By</td>
+                <td class="value">{{ data.approved_by_full_name|default:"N/A" }}</td>
+            </tr>
+            <tr>
+                <td class="label">Date Tested</td>
+                <td class="value">{{ record.created_at|date:"d-m-Y H:i"|default:"-" }}</td>
+                <td class="label">Date Approved</td>
+                <td class="value">{% if record.approved_at %}{{ record.approved_at|date:"d-m-Y H:i" }}{% else %}N/A
+                    {% endif %}</td>
+                <td class="label"></td>
+                <td class="value"></td>
+            </tr>
+        </table>
+        ```
         <h2>Test Results</h2>
         <table class="results-table">
             <thead>
                 <tr>
                     <th>S.No.</th>
                     <th>Parameter</th>
-                    <th>Specification</th>
+                    <th>Expected Range</th>
                     <th>Unit</th>
                     <th>Result</th>
                     <th>Status</th>
@@ -410,13 +350,14 @@
                         -
                         {% endif %}
                     </td>
-                    <td>{{ param.parameter.unit|default:"" }}</td>
+                    <td>{{ param.parameter.unit|default:"NA" }}</td>
                     <td>{{ param.display_value }}</td>
                     <td>{{ param.status }}</td>
                 </tr>
                 {% empty %}
                 <tr>
-                    <td colspan="6" style="text-align: center; color: #777;">No test results recorded for this sample.
+                    <td colspan="6" style="text-align: center; color: #777; padding: 20px;">
+                        No test results recorded for this sample.
                     </td>
                 </tr>
                 {% endfor %}
@@ -431,29 +372,14 @@
 
         {% if record.supervisor_comments %}
         <div class="comments-section">
-            <h3>Supervisor Comments</h3>
+            <h3>Rejection Comments</h3>
             <p>{{ record.supervisor_comments }}</p>
         </div>
         {% endif %}
 
-        <div class="signature-section">
-            <div class="signature-box">
-                <div class="signature-line"></div>
-                <div class="label">Tested By (Analyst)</div>
-                <div class="name">{{ data.analyst_full_name|default:"N/A" }}</div>
-                <div class="date">Date: {{ record.created_at|date:"d-m-Y H:i" }}</div>
-            </div>
-
-            <div class="signature-box">
-                <div class="signature-line"></div>
-                <div class="label">Approved By (Quality Assurance)</div>
-                <div class="name">{{ data.approved_by_full_name|default:"N/A" }}</div>
-                <div class="date">Date: {% if record.approved_at %}{{ record.approved_at|date:"d-m-Y H:i" }}N/A{% endif %}</div>
-            </div>
-        </div>
-
-        <p style="text-align: center; font-size: 8pt; color: #999; margin-top: 30px;">
-            --- End of Report ---
+        <p
+            style="text-align: center; font-size: 9pt; font-style: italic; color: #000000; margin-top: 25px; border-top: 1px solid #eee; padding-top: 10px;">
+            This is a computer-generated report. No signature is required.
         </p>
     </main>
 </body>

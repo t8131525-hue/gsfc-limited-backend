@@ -98,42 +98,29 @@ class TestRecordViewSet(viewsets.ModelViewSet):
         Generates and returns a PDF report for a specific test record.
         """
         try:
-            # 1. Get the raw model instance (for header, comments, etc.)
             instance = self.get_object()
-
-            # 2. Get the serialized data (for the table and signatures)
-            #    We use self.get_serializer() to respect the ViewSet's logic
             serializer = self.get_serializer(instance, context={"request": request})
             record_data = serializer.data
-
-            # 3. Load and encode the company logo
             logo_base64 = None
-            logo_path = os.path.join(settings.BASE_DIR, "static", "images", "logo.png")
+            logo_path = os.path.join(settings.BASE_DIR, "product_testing_system", "static", "images", "logo.png")
 
             try:
                 with open(logo_path, "rb") as image_file:
                     logo_base64 = base64.b64encode(image_file.read()).decode("utf-8")
             except FileNotFoundError:
-                # Handle case where logo is missing
                 print(f"Logo file not found at {logo_path}")
-                pass  # Continue without a logo
+                pass 
 
-            # 4. Prepare the template context
             context = {
-                "record": instance,  # 👈 Pass the instance for header/comments
+                "record": instance,
                 "data": record_data,  # 👈 Pass the serialized data for the table/signatures
                 "logo_base64": logo_base64,
             }
 
-            # 5. Render the HTML template
             html_string = render_to_string("reports/test_record_report.html", context)
-
-            # 6. Convert to PDF
             pdf_file = HTML(
                 string=html_string, base_url=request.build_absolute_uri()
             ).write_pdf()
-
-            # 7. Create the HTTP response
             response = HttpResponse(pdf_file, content_type="application/pdf")
             response["Content-Disposition"] = (
                 f'attachment; filename="Report-{instance.record_id}.pdf"'
@@ -152,8 +139,6 @@ class TestRecordViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 
-
-
     # 👇 =================================================================
     # 👇   ADD THIS NEW FUNCTION
     # 👇 =================================================================
@@ -167,9 +152,40 @@ class TestRecordViewSet(viewsets.ModelViewSet):
         """
         Generates and returns an Excel (.xlsx) report for a specific test record.
         """
+        
+        def get_expected_range(param_data):
+            data_type = param_data.get("data_type")
+            
+            if data_type in ["INTEGER", "DECIMAL"]:
+                min_val = param_data.get("min_value")
+                max_val = param_data.get("max_value")
+                if min_val is not None and max_val is not None:
+                    return f"{min_val} - {max_val}"
+                if min_val is not None:
+                    return f">= {min_val}"
+                if max_val is not None:
+                    return f"<= {max_val}"
+                return "NA" # Changed from N/A
+                
+            elif data_type == "ENUM":
+                options = param_data.get("enum_options")
+                if options and isinstance(options, list):
+                    return ", ".join(options)
+                return "NA" # Changed from N/A
+                
+            elif data_type == "BOOLEAN":
+                true_label = param_data.get("boolean_true_label", "True")
+                false_label = param_data.get("boolean_false_label", "False")
+                return f"{true_label} / {false_label}"
+                
+            elif data_type == "STRING":
+                return "Text"
+                
+            return "NA" # Changed from N/A
+
         try:
             # 1. Get object and serializer data
-            instance = self.get_object()
+            instance = self.get_object() # 👈 We need the raw instance
             serializer = TestRecordSerializer(instance, context={"request": request})
             record_data = serializer.data
 
@@ -177,8 +193,7 @@ class TestRecordViewSet(viewsets.ModelViewSet):
             wb = Workbook()
             ws = wb.active
             ws.title = "Test Report"
-
-            # Define a bold font style for headers
+            
             bold_font = Font(bold=True)
 
             # 3. Add Main Record Details
@@ -186,20 +201,26 @@ class TestRecordViewSet(viewsets.ModelViewSet):
             ws["A1"].font = bold_font
             ws.merge_cells("A1:B1")
 
+            # --- UPDATED SECTION ---
+            # We now use .get(key) or "NA" to handle blank/null values
             main_details = [
-                ("Record ID", record_data.get("record_id")),
-                ("Product", record_data.get("product_name")),
-                ("Grade", record_data.get("product_grade_name", "N/A")),
-                ("Batch No", record_data.get("batch_no")),
-                ("Sample ID", record_data.get("sample_id")),
-                ("Lab", record_data.get("lab_name")),
-                ("Status", record_data.get("status")),
-                ("Decision", record_data.get("decision", "N/A")),
-                ("Analyst", record_data.get("analyst_full_name", "N/A")),
-                ("Approved By", record_data.get("approved_by_full_name", "N/A")),
-                ("Approved At", record_data.get("approved_at")),
+                ("Record ID", record_data.get("record_id") or "NA"),
+                ("Product ID", instance.version.product.product_id or "NA"),
+                ("Product", record_data.get("product_name") or "NA"),
+                ("Testing Version", record_data.get("version_name") or "NA"),
+                ("Grade", record_data.get("product_grade_name") or "NA"),
+                ("Batch No", record_data.get("batch_no") or "NA"),
+                ("Sample ID", record_data.get("sample_id") or "NA"),
+                ("Lab", record_data.get("lab_name") or "NA"),
+                ("Status", record_data.get("status") or "NA"),
+                ("Decision", record_data.get("decision") or "NA"),
+                ("Tested At", record_data.get("created_at") or "NA"),
+                ("Analyst", record_data.get("analyst_full_name") or "NA"),
+                ("Approved By", record_data.get("approved_by_full_name") or "NA"),
+                ("Approved At", record_data.get("approved_at") or "NA"),
             ]
-
+            # --- END UPDATED SECTION ---
+            
             for row, (key, value) in enumerate(main_details, start=2):
                 ws[f"A{row}"] = key
                 ws[f"A{row}"].font = bold_font
@@ -207,7 +228,7 @@ class TestRecordViewSet(viewsets.ModelViewSet):
 
             # Add a spacer row
             spacer_row = len(main_details) + 3
-            ws.append([])  # Add an empty row
+            ws.append([]) # Add an empty row
 
             # 4. Add Parameter Results
             results_header_row = spacer_row
@@ -215,27 +236,27 @@ class TestRecordViewSet(viewsets.ModelViewSet):
             ws[f"A{results_header_row}"].font = bold_font
             ws.merge_cells(f"A{results_header_row}:D{results_header_row}")
 
-            param_headers = ["Parameter", "Data Type", "Result", "Status"]
+            param_headers = ["Parameter", "Expected Range", "Result", "Status"]
             ws.append(param_headers)
-            for cell in ws[ws.max_row]:  # Get the last row
+            for cell in ws[ws.max_row]: 
                 cell.font = bold_font
 
-            # Loop through parameter values and add them
             param_values = record_data.get("parameter_values", [])
             if param_values:
                 for param in param_values:
-                    ws.append(
-                        [
-                            param.get("parameter", {}).get("name"),
-                            param.get("parameter", {}).get("data_type"),
-                            param.get("display_value"),
-                            param.get("status"),
-                        ]
-                    )
+                    param_data = param.get("parameter", {})
+                    expected_range = get_expected_range(param_data)
+                    
+                    ws.append([
+                        param_data.get("name") or "NA",
+                        expected_range,
+                        param.get("display_value") or "NA",
+                        param.get("status") or "NA",
+                    ])
             else:
                 ws.append(["No test results recorded."])
 
-            # 5. Set column widths for readability
+            # 5. Set column widths
             ws.column_dimensions["A"].width = 25
             ws.column_dimensions["B"].width = 30
             ws.column_dimensions["C"].width = 20
@@ -244,7 +265,7 @@ class TestRecordViewSet(viewsets.ModelViewSet):
             # 6. Save workbook to an in-memory stream
             with io.BytesIO() as b:
                 wb.save(b)
-                b.seek(0)  # Rewind the stream
+                b.seek(0)
 
                 # 7. Create the HTTP response
                 response = HttpResponse(
