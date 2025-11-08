@@ -47,6 +47,11 @@ class Version(AuditableMixin, models.Model):
         ]
 
     def clean(self):
+        has_parameters = False
+        has_grades = False
+        if self.pk:
+            has_parameters = self.parameters.exists()
+            has_grades = self.grades.exists()
         if self.pk:
             has_parameters = self.parameters.exists()
             has_grades = self.grades.exists()
@@ -82,7 +87,7 @@ class Version(AuditableMixin, models.Model):
             self.activated_at = now()
         elif not self.is_active:
             self.activated_at = None
-        
+
         self.full_clean()
 
         if self.is_active:

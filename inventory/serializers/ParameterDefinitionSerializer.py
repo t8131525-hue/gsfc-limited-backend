@@ -26,7 +26,6 @@ class ParameterDefinitionSerializer(serializers.ModelSerializer):
             "max_value",
             "boolean_true_label",
             "boolean_false_label",
-            # ✅ Add the new fields to the list
             "version_id",
             "grade_id",
         ]
@@ -49,7 +48,6 @@ class ParameterDefinitionSerializer(serializers.ModelSerializer):
         return None
 
     def validate(self, data):
-        # Ensure either version_id or grade_id is provided, but not both
         if not self.instance:  # Only on create
             if "version_id" not in data and "grade_id" not in data:
                 raise serializers.ValidationError(
@@ -61,7 +59,6 @@ class ParameterDefinitionSerializer(serializers.ModelSerializer):
                 )
         return data
 
-    # ✅ 2. Override the create method to handle the linking logic
     def create(self, validated_data):
         version_id = validated_data.pop("version_id", None)
         grade_id = validated_data.pop("grade_id", None)
@@ -81,8 +78,13 @@ class ParameterDefinitionSerializer(serializers.ModelSerializer):
                     {"grade_id": "ProductGrade not found."}
                 )
 
-        # Create the parameter and assign the owner correctly
-        parameter = ParameterDefinition.objects.create(
-            owner=owner_object, **validated_data
-        )
-        return parameter
+        # --- FIX: Wrap the create() call in a try/except ---
+        try:
+            parameter = ParameterDefinition.objects.create(
+                owner=owner_object, **validated_data
+            )
+            return parameter
+        except DjangoValidationError as e:
+            # Catch the validation error from model.save() -> full_clean()
+            raise serializers.ValidationError(e.message_dict)
+        # --- END FIX ---

@@ -14,6 +14,8 @@ class InventoryStatsView(APIView):
         permissions.DjangoModelPermissions,
     ]
 
+    queryset = Product.objects.none()
+
     def get(self, request, *args, **kwargs):
         total_products = Product.objects.count()
         pending_tests = TestRecord.objects.filter(status="PENDING").count()
