@@ -46,20 +46,16 @@ class InventoryAPITests(APITestCase):
         cls.analyst_user.groups.add(cls.analyst_group)
         cls.manager_user.groups.add(cls.manager_group)
 
-        # 3. Assign Permissions
-        # Get all permissions for the 'inventory' app
         app_label = "inventory"
         inventory_permissions = Permission.objects.filter(
             content_type__app_label=app_label
         )
 
-        # Give managers all inventory permissions
         cls.manager_group.permissions.add(*inventory_permissions)
 
-        # Give analysts specific permissions
         analyst_perms_codenames = [
             "can_view_test_records",
-            "can_manage_test_records",  # For creating/editing their own
+            "can_manage_test_records",
             "can_view_products",
             "can_view_product_grades",
         ]
@@ -68,12 +64,8 @@ class InventoryAPITests(APITestCase):
         )
         cls.analyst_group.permissions.add(*analyst_permissions)
 
-        # 4. Core Data
         cls.lab = Lab.objects.create(name="Main Lab")
         cls.product = Product.objects.create(name="Super Cement")
-        # The post_save signal will assign cls.product.product_id
-
-        # 5. Versions
         cls.v_draft = Version.objects.create(
             product=cls.product,
             version_name="v0.1-DRAFT",
@@ -81,7 +73,6 @@ class InventoryAPITests(APITestCase):
             created_by=cls.manager_user,
         )
 
-        # Locked Version (No Grades)
         cls.v_locked_simple = Version.objects.create(
             product=cls.product,
             version_name="v1.0-Simple",
