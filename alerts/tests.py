@@ -75,10 +75,8 @@ class AlertsTestCase(TestCase):
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-        # --- FIX: Access the response data as a list ---
         self.assertEqual(len(response.data), 1)
         alert_data = response.data[0]
-        # --- End of fix ---
 
         self.assertEqual(alert_data['status'], 'NEW')
         self.assertEqual(alert_data['sample_id'], 'ALERT-SAMPLE-001')

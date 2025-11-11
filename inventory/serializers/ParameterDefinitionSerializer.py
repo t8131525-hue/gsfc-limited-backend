@@ -1,13 +1,11 @@
 from rest_framework import serializers
 from ..models import ParameterDefinition, Version, ProductGrade
 from django.core.exceptions import ValidationError as DjangoValidationError
-from django.contrib.contenttypes.models import ContentType
 
 
 class ParameterDefinitionSerializer(serializers.ModelSerializer):
     owner_info = serializers.SerializerMethodField()
 
-    # ✅ 1. Add these write-only fields to accept a direct ID
     version_id = serializers.IntegerField(write_only=True, required=False)
     grade_id = serializers.IntegerField(write_only=True, required=False)
 
@@ -48,7 +46,7 @@ class ParameterDefinitionSerializer(serializers.ModelSerializer):
         return None
 
     def validate(self, data):
-        if not self.instance:  # Only on create
+        if not self.instance:
             if "version_id" not in data and "grade_id" not in data:
                 raise serializers.ValidationError(
                     "Either a 'version_id' or a 'grade_id' must be provided."
@@ -78,13 +76,10 @@ class ParameterDefinitionSerializer(serializers.ModelSerializer):
                     {"grade_id": "ProductGrade not found."}
                 )
 
-        # --- FIX: Wrap the create() call in a try/except ---
         try:
             parameter = ParameterDefinition.objects.create(
                 owner=owner_object, **validated_data
             )
             return parameter
         except DjangoValidationError as e:
-            # Catch the validation error from model.save() -> full_clean()
             raise serializers.ValidationError(e.message_dict)
-        # --- END FIX ---

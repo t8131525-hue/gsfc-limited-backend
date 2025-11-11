@@ -5,10 +5,7 @@ from .VersionNestedLiteSerializer import VersionNestedLiteSerializer
 
 class ProductSerializer(serializers.ModelSerializer):
     versions = serializers.SerializerMethodField()
-
-    # --- FIX: Change this to a SerializerMethodField ---
     active_version_name = serializers.SerializerMethodField()
-    # --- END FIX ---
 
     class Meta:
         model = Product
@@ -22,7 +19,6 @@ class ProductSerializer(serializers.ModelSerializer):
 
     def get_active_version(self, obj):
         """Helper method to get the active version once."""
-        # Use a cached attribute if it exists
         if not hasattr(self, "_active_version"):
             self._active_version = obj.versions.filter(is_active=True).first()
         return self._active_version
@@ -40,7 +36,7 @@ class ProductSerializer(serializers.ModelSerializer):
         It finds the single active version, serializes it,
         and returns it in a list.
         """
-        active_version = self.get_active_version(obj)  # Use helper
+        active_version = self.get_active_version(obj)
         context = self.context
 
         if active_version:

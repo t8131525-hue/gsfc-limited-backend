@@ -3,6 +3,7 @@ from django.contrib.auth import get_user_model
 
 User = get_user_model()
 
+
 class AssignAnalystSerializer(serializers.Serializer):
     """
     A simple serializer to validate the analyst being assigned to a TestRecord.
@@ -11,11 +12,14 @@ class AssignAnalystSerializer(serializers.Serializer):
     analyst_id = serializers.IntegerField()
 
     def validate_analyst_id(self, value):
-        # Check if the user exists and is an analyst
+        # Check if the user exists
         try:
             user = User.objects.get(pk=value)
-            if not user.groups.filter(name="Analyst").exists():
-                raise serializers.ValidationError("This user is not a Analyst.")
         except User.DoesNotExist:
-            raise serializers.ValidationError("An analyst with this ID does not exist.")
+            raise serializers.ValidationError("A user with this ID does not exist.")
+        if not user.has_perm("inventory.can_manage_test_records"):
+            raise serializers.ValidationError(
+                "This user does not have permission to manage test records."
+            )
+
         return value

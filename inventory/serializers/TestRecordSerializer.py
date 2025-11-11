@@ -4,7 +4,9 @@ from alerts.models import Alert
 from .TestResultDisplaySerializer import TestResultDisplaySerializer
 from .TestResultInputSerializer import TestResultInputSerializer
 from django.db import transaction
-from django.core.exceptions import ValidationError as DjangoValidationError # <-- Import
+from django.core.exceptions import (
+    ValidationError as DjangoValidationError,
+)  # <-- Import
 
 
 class RelatedTestRecordSerializer(serializers.ModelSerializer):
@@ -31,7 +33,6 @@ class TestRecordSerializer(serializers.ModelSerializer):
     closed_by_full_name = serializers.SerializerMethodField()
     retest_ordered_by_full_name = serializers.SerializerMethodField()
     product_id = serializers.IntegerField(source="version.product.id", read_only=True)
-
     product_name = serializers.CharField(source="version.product.name", read_only=True)
     product_grade_name = serializers.CharField(
         source="product_grade.name", read_only=True, allow_null=True
@@ -39,7 +40,6 @@ class TestRecordSerializer(serializers.ModelSerializer):
     lab_name = serializers.CharField(source="lab.name", read_only=True)
     record_id = serializers.CharField(read_only=True)
     version_name = serializers.CharField(source="version.version_name", read_only=True)
-
     retest_of = RelatedTestRecordSerializer(read_only=True)
     retests = RelatedTestRecordSerializer(many=True, read_only=True)
     alerts = RelatedAlertSerializer(many=True, read_only=True)
@@ -125,14 +125,11 @@ class TestRecordSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         parameter_values_data = validated_data.pop("parameter_values")
         validated_data["analyst"] = self.context["request"].user
-        
-        # --- FIX: Wrap create in try/except ---
+
         try:
             test_record = TestRecord.objects.create(**validated_data)
         except DjangoValidationError as e:
             raise serializers.ValidationError(e.message_dict)
-        # --- END FIX ---
-            
         for result_data in parameter_values_data:
             TestResult.objects.create(test_record=test_record, **result_data)
         return test_record
@@ -148,8 +145,7 @@ class TestRecordSerializer(serializers.ModelSerializer):
             }
             for result_data in parameter_values_data:
                 parameter = result_data["parameter"]
-                
-                # --- FIX: Wrap result save in try/except ---
+
                 try:
                     if parameter.id in existing_results:
                         result_instance = existing_results.pop(parameter.id)
@@ -160,9 +156,7 @@ class TestRecordSerializer(serializers.ModelSerializer):
                     else:
                         TestResult.objects.create(test_record=instance, **result_data)
                 except DjangoValidationError as e:
-                    # This will catch the immutability error from TestResult.clean()
                     raise serializers.ValidationError(e.message_dict)
-                # --- END FIX ---
 
             if existing_results:
                 TestResult.objects.filter(

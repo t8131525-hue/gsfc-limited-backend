@@ -1,7 +1,6 @@
 from django.db import models, transaction
 from audit_trail.mixins import AuditableMixin
 from django.core.exceptions import ValidationError
-from ..models import Lab, Product, ProductGrade
 from django.utils.translation import gettext_lazy as _
 from django.contrib.auth import get_user_model
 from django.conf import settings
@@ -11,9 +10,6 @@ User = get_user_model()
 
 
 class TestRecord(AuditableMixin, models.Model):
-    # --- CORRECTED AND FINAL FIELDS ---
-
-    # The Version is the single source of truth for the specification
     version = models.ForeignKey(
         "inventory.Version", on_delete=models.PROTECT, related_name="test_records"
     )
@@ -28,7 +24,6 @@ class TestRecord(AuditableMixin, models.Model):
         related_name="test_records",
     )
 
-    # Unique, auto-generated ID
     record_id = models.CharField(
         max_length=20,
         unique=True,
@@ -38,7 +33,6 @@ class TestRecord(AuditableMixin, models.Model):
         help_text="Auto-generated unique test record ID, e.g. TR20250731-01",
     )
 
-    # Batch and sample info
     batch_no = models.CharField(
         max_length=255, help_text="The batch number for the sample, e.g., 'A'"
     )
@@ -47,7 +41,6 @@ class TestRecord(AuditableMixin, models.Model):
         help_text="Identifier for the sample tested. Not unique, as retests will share this ID.",
     )
 
-    # Status and workflow
     STATUS_CHOICES = [
         ("PENDING", "Pending"),
         ("APPROVED", "Approved"),
@@ -67,7 +60,6 @@ class TestRecord(AuditableMixin, models.Model):
         blank=True,
         help_text="The final approval or rejection decision, preserved when closed.",
     )
-    # User, approval tracking and Time stamps
     analyst = models.ForeignKey(
         User,
         on_delete=models.SET_NULL,
@@ -130,25 +122,23 @@ class TestRecord(AuditableMixin, models.Model):
 
     def _create_retest(self):
         """Creates a new PENDING TestRecord that links back to this one."""
-        if not self.retests.exists():  # Ensure we only create one retest
+        if not self.retests.exists():
             new_retest = TestRecord.objects.create(
                 version=self.version,
                 lab=self.lab,
                 product_grade=self.product_grade,
                 batch_no=self.batch_no,
                 sample_id=self.sample_id,
-                analyst=None,  # A new analyst will be assigned
-                status="PENDING",  # The new record starts as PENDING
+                analyst=None,
+                status="PENDING",
                 retest_of=self,
             )
             return new_retest
         return None
 
     def clean(self):
-        # --- ENTIRE CLEAN METHOD IS REVAMPED FOR WORKFLOW AND IMMUTABILITY ---
         super().clean()
 
-        # 1. Initial creation checks
         if self.version and self.version.status != "LOCKED":
             raise ValidationError(
                 _("Test records can only be created for 'LOCKED' versions.")
@@ -174,21 +164,15 @@ class TestRecord(AuditableMixin, models.Model):
                 )
             )
 
-        # 2. Logic for existing records (updates)
         if self.pk:
             original = TestRecord.objects.select_for_update().get(pk=self.pk)
             original_status = original.status
 
-            # Rule: Cannot modify a CLOSED record at all.
             if original_status == "CLOSED":
                 raise ValidationError(_("Cannot modify a 'CLOSED' test record."))
 
-            # Rule: Cannot modify most fields of a finalized record.
-            # This prevents changing the batch number, sample ID etc. after approval.
             finalized_statuses = ["APPROVED", "REJECTED", "RETEST_ORDERED"]
             if original_status in finalized_statuses:
-                # We allow changing status (e.g., from APPROVED to CLOSED)
-                # and adding supervisor comments, but nothing else.
                 non_editable_fields = [
                     "version",
                     "lab",
@@ -206,8 +190,6 @@ class TestRecord(AuditableMixin, models.Model):
                             % {"field": field, "status": original.get_status_display()}
                         )
 
-            # Rule: Enforce state transitions
-            # PENDING can only go to APPROVED or REJECTED
             if (
                 original_status == "PENDING"
                 and self.status != original_status
@@ -219,7 +201,6 @@ class TestRecord(AuditableMixin, models.Model):
                     )
                 )
 
-            # RETEST_ORDERED can only be set from APPROVED or REJECTED
             if self.status == "RETEST_ORDERED" and original_status not in [
                 "APPROVED",
                 "REJECTED",
@@ -242,26 +223,18 @@ class TestRecord(AuditableMixin, models.Model):
                 )
 
     def save(self, *args, **kwargs):
-        # Set timestamps for status changes
-        # if self.status in ["APPROVED", "REJECTED"] and not self.approved_at:
-        #     self.approved_at = timezone.now()
-        #     self.decision = self.status
         if self.status == "CLOSED" and not self.closed_at:
             self.closed_at = timezone.now()
         if self.status == "RETEST_ORDERED" and not self.retest_ordered_at:
             self.retest_ordered_at = timezone.now()
 
-        # Run full validation before saving
         self.full_clean()
 
-        # Use a transaction to ensure data integrity
         with transaction.atomic():
             is_new = self.pk is None
             super().save(*args, **kwargs)
 
-            # Auto-generate record_id for new instances
             if is_new and not self.record_id:
-                # Use select_for_update to lock rows and prevent race conditions
                 last_record = (
                     TestRecord.objects.select_for_update()
                     .filter(created_at__date=self.created_at.date())
@@ -272,17 +245,13 @@ class TestRecord(AuditableMixin, models.Model):
                 sequence = 1
                 if last_record and last_record.record_id:
                     try:
-                        # The prefix + date part is still 10 chars (TRDDMMYYYY), so this slice works
                         last_sequence = int(last_record.record_id[10:])
                         sequence = last_sequence + 1
                     except (ValueError, IndexError):
-                        pass  # Fallback to 1 if parsing fails
+                        pass
 
-                # Changed date format to DDMMYYYY for Indian standard
                 date_str = self.created_at.strftime("%d%m%Y")
 
-                # New format with a 6-digit padded sequence number
                 self.record_id = f"TR{date_str}{sequence:06d}"
 
-                # Save only the record_id field to avoid triggering save recursion
                 super().save(update_fields=["record_id"])

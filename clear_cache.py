@@ -17,7 +17,6 @@ def delete_pycache_dirs(root_dir):
     print(f"\n✅ Done. Deleted {pycache_count} '__pycache__' folders.")
 
 if __name__ == "__main__":
-    # Set the root directory to the current working directory
     project_root = os.getcwd()
     print(f"Scanning for __pycache__ folders in: {project_root}")
     delete_pycache_dirs(project_root)

@@ -10,9 +10,6 @@ environ.Env.read_env(BASE_DIR / ".env")
 
 SECRET_KEY = env("SECRET_KEY")
 
-# -----------------------------------
-# 🌍 Environment Configuration
-# -----------------------------------
 DEBUG = env.bool("DEBUG", default=False)
 ALLOWED_HOSTS = env.list("ALLOWED_HOSTS", default=["localhost", "127.0.0.1"])
 TIME_ZONE = env("TIME_ZONE", default="Asia/Kolkata")
@@ -39,6 +36,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     "corsheaders.middleware.CorsMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -100,8 +98,6 @@ USE_I18N = True
 
 USE_TZ = True
 
-STATIC_URL = "static/"
-
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 AUTHENTICATION_BACKENDS = [
@@ -156,4 +152,8 @@ SIMPLE_JWT = {
 CORS_ALLOWED_ORIGINS = env.list("CORS_ALLOWED_ORIGINS")
 CORS_ALLOW_CREDENTIALS = env.bool("CORS_ALLOW_CREDENTIALS")
 CORS_EXPOSE_HEADERS = env.list("CORS_EXPOSE_HEADERS", default=["Content-Disposition"])
-STATIC_URL = env("STATIC_URL", default="/static/")
+
+STATIC_URL = "static/"
+
+STATIC_ROOT = BASE_DIR / "staticfiles"
+STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
